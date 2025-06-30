@@ -1,0 +1,8 @@
+{
+  "name": "Bharat Mitra",
+  "description": "An AI-powered assistant designed to help Indian students, farmers, and rural citizens access and understand government schemes, benefits, and scholarships.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "prompt": ""
+}

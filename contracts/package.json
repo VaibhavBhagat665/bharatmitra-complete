@@ -1,0 +1,46 @@
+{
+  "name": "bharat-token-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for Bharat Token (BRT)",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "clean": "hardhat clean",
+    "deploy": "hardhat run scripts/deploy.js --network sepolia",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "verify": "hardhat verify --network sepolia",
+    "node": "hardhat node",
+    "console": "hardhat console --network sepolia",
+    "size": "hardhat size-contracts",
+    "coverage": "hardhat coverage"
+  },
+  "keywords": [
+    "solidity",
+    "hardhat",
+    "erc20",
+    "bharat",
+    "token"
+  ],
+  "author": "Bharat Mitra Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.6",
+    "@nomicfoundation/hardhat-ethers": "^3.0.5",
+    "@nomicfoundation/hardhat-verify": "^2.0.7",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
+    "chai": "^4.4.1",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.12.1",
+    "hardhat": "^2.22.6",
+    "hardhat-gas-reporter": "^1.0.10",
+    "solidity-coverage": "^0.8.12",
+    "typechain": "^8.3.2"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2"
+  }
+}
