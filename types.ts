@@ -1,3 +1,23 @@
+import { Timestamp } from 'firebase/firestore';
+
+export interface SchemeHistoryEntry {
+  scheme_name: string;
+  applied_on: string; // ISO date string
+  hash: string;
+}
+
+export interface UserProfile {
+  uid: string;
+  username: string;
+  email: string;
+  birthday: string;
+  occupation: string;
+  joined_at: Timestamp | any; // serverTimestamp
+  auth_provider: 'email' | 'google';
+  bharat_tokens: number;
+  scheme_history: SchemeHistoryEntry[];
+}
+
 export enum MessageSender {
   USER = 'user',
   AI = 'ai',
