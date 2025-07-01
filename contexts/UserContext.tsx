@@ -6,7 +6,7 @@ import { UserProfile, SchemeHistoryEntry } from '../types';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
 
 // The base URL for your backend server
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://bharat-mitra-backend.railway.com';
 
 interface UserContextType {
   user: User | null;
