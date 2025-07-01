@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   createUserWithEmailAndPassword,
@@ -6,9 +6,9 @@ import {
   signInWithPopup,
   getAdditionalUserInfo
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase/config';
-import { UserContext } from '../contexts/UserContext';
+import { useUser } from '../contexts/UserContext';
 import { UserProfile } from '../types';
 
 const AuthPage: React.FC = () => {
@@ -22,7 +22,7 @@ const AuthPage: React.FC = () => {
   const [birthday, setBirthday] = useState('');
   const [occupation, setOccupation] = useState('');
   
-  const { user } = useContext(UserContext);
+  const { user } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
@@ -63,7 +63,8 @@ const AuthPage: React.FC = () => {
             navigate(from, { replace: true });
         }
     } catch (err: any) {
-        setError(err.message);
+        console.error('Google sign-in error:', err);
+        setError(err.message || 'Failed to sign in with Google');
     } finally {
         setLoading(false);
     }
@@ -74,12 +75,32 @@ const AuthPage: React.FC = () => {
     setError('');
     setLoading(true);
 
+    // Basic validation
+    if (!email || !password) {
+      setError('Email and password are required');
+      setLoading(false);
+      return;
+    }
+
+    if (!isLogin && (!fullName || !birthday || !occupation)) {
+      setError('All fields are required for registration');
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      setLoading(false);
+      return;
+    }
+
     if (isLogin) {
         // Sign In
         try {
             await signInWithEmailAndPassword(auth, email, password);
             navigate(from, { replace: true });
         } catch (err: any) {
+            console.error('Sign-in error:', err);
             setError('Failed to sign in. Please check your credentials.');
         }
     } else {
@@ -103,7 +124,14 @@ const AuthPage: React.FC = () => {
             await setDoc(userRef, newUserProfile);
             navigate(from, { replace: true });
         } catch (err: any) {
-            setError('Failed to create an account. The email might already be in use.');
+            console.error('Sign-up error:', err);
+            if (err.code === 'auth/email-already-in-use') {
+              setError('This email is already registered. Please sign in instead.');
+            } else if (err.code === 'auth/weak-password') {
+              setError('Password is too weak. Please choose a stronger password.');
+            } else {
+              setError('Failed to create an account. Please try again.');
+            }
         }
     }
     setLoading(false);
@@ -111,7 +139,7 @@ const AuthPage: React.FC = () => {
 
   // Don't render the form if user is already logged in
   if (user) {
-    return <div>Redirecting...</div>;
+    return <div className="text-center mt-10">Redirecting...</div>;
   }
 
   return (
@@ -127,17 +155,57 @@ const AuthPage: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
                 {!isLogin && (
                      <>
-                        <input type="text" placeholder="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} required className="w-full px-4 py-2 border rounded-md" />
-                        <input type="date" placeholder="Birthday" value={birthday} onChange={e => setBirthday(e.target.value)} required className="w-full px-4 py-2 border rounded-md" />
-                        <input type="text" placeholder="Occupation (e.g., Student, Farmer)" value={occupation} onChange={e => setOccupation(e.target.value)} required className="w-full px-4 py-2 border rounded-md" />
+                        <input 
+                          type="text" 
+                          placeholder="Full Name" 
+                          value={fullName} 
+                          onChange={e => setFullName(e.target.value)} 
+                          required 
+                          className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-bharat-blue-500" 
+                        />
+                        <input 
+                          type="date" 
+                          placeholder="Birthday" 
+                          value={birthday} 
+                          onChange={e => setBirthday(e.target.value)} 
+                          required 
+                          className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-bharat-blue-500" 
+                        />
+                        <input 
+                          type="text" 
+                          placeholder="Occupation (e.g., Student, Farmer)" 
+                          value={occupation} 
+                          onChange={e => setOccupation(e.target.value)} 
+                          required 
+                          className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-bharat-blue-500" 
+                        />
                      </>
                 )}
-                <input type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-md" />
-                <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full px-4 py-2 border rounded-md" />
+                <input 
+                  type="email" 
+                  placeholder="Email Address" 
+                  value={email} 
+                  onChange={e => setEmail(e.target.value)} 
+                  required 
+                  className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-bharat-blue-500" 
+                />
+                <input 
+                  type="password" 
+                  placeholder="Password" 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  required 
+                  minLength={6}
+                  className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-bharat-blue-500" 
+                />
 
-                {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+                {error && <p className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">{error}</p>}
 
-                <button type="submit" disabled={loading} className="w-full bg-bharat-blue-700 text-white font-bold py-3 px-4 rounded-md hover:bg-bharat-blue-800 disabled:bg-gray-400 transition-colors">
+                <button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="w-full bg-bharat-blue-700 text-white font-bold py-3 px-4 rounded-md hover:bg-bharat-blue-800 disabled:bg-gray-400 transition-colors"
+                >
                     {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
                 </button>
             </form>
@@ -148,14 +216,30 @@ const AuthPage: React.FC = () => {
                 <div className="flex-grow border-t border-gray-300"></div>
             </div>
 
-            <button onClick={handleGoogleSignIn} disabled={loading} className="w-full flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-bold py-3 px-4 rounded-md hover:bg-gray-50 disabled:bg-gray-200 transition-colors">
+            <button 
+              onClick={handleGoogleSignIn} 
+              disabled={loading} 
+              className="w-full flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-bold py-3 px-4 rounded-md hover:bg-gray-50 disabled:bg-gray-200 transition-colors"
+            >
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" className="w-5 h-5 mr-3" />
                 Sign In with Google
             </button>
             
             <p className="text-center text-sm text-gray-600 mt-6">
                 {isLogin ? "Don't have an account?" : "Already have an account?"}
-                <button onClick={() => { setIsLogin(!isLogin); setError(''); }} className="font-semibold text-bharat-blue-700 hover:underline ml-1">
+                <button 
+                  onClick={() => { 
+                    setIsLogin(!isLogin); 
+                    setError('');
+                    // Clear form fields when switching
+                    setEmail('');
+                    setPassword('');
+                    setFullName('');
+                    setBirthday('');
+                    setOccupation('');
+                  }} 
+                  className="font-semibold text-bharat-blue-700 hover:underline ml-1"
+                >
                     {isLogin ? 'Sign Up' : 'Sign In'}
                 </button>
             </p>
