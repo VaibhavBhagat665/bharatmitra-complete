@@ -1,0 +1,28 @@
+@keyframes bounce-emoji {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.animate-emoji {
+  animation: bounce-emoji 1s infinite;
+}
+
+@keyframes scroll-left-right {
+  0% { transform: translateX(100%); }
+  50% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.marquee-container {
+  overflow: hidden;
+  width: 100%;
+}
+
+.marquee-track {
+  display: flex;
+  animation: scroll-left-right 35s linear infinite;
+  /* width: max-content; */
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
