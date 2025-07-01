@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { Scholarship, ScholarshipCriteria } from '../types';
-import { SCHOLARSHIPS_DATA } from '../constants';
+import { RECOMMENDED_SCHEMES } from '../constants';
 import { UserContext } from '../contexts/UserContext';
 import ScholarshipCard from '../components/ScholarshipCard';
 
@@ -14,7 +14,7 @@ const ScholarshipPage: React.FC = () => {
   });
   const [results, setResults] = useState<Scholarship[]>([]);
   const [searched, setSearched] = useState(false);
-  const { rewardTokens } = useContext(UserContext);
+  const { addTokens } = useContext(UserContext);
   const [profileCompleted, setProfileCompleted] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -22,15 +22,14 @@ const ScholarshipPage: React.FC = () => {
     setCriteria(prev => ({ ...prev, [name]: value === '' ? null : value }));
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!profileCompleted) {
-        console.log("Profile completed. Awarding 10 tokens.");
-        await rewardTokens(10, 'scholarship-profile-completion');
-        setProfileCompleted(true);
+      addTokens(10);
+      setProfileCompleted(true);
     }
 
-    const filtered = SCHOLARSHIPS_DATA.filter(s => {
+    const filtered = RECOMMENDED_SCHEMES.filter(s => {
       const { eligibility } = s;
       const age = criteria.age ? parseInt(String(criteria.age)) : null;
       const income = criteria.income ? parseInt(String(criteria.income)) : null;
@@ -49,26 +48,27 @@ const ScholarshipPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 to-red-50 px-4 py-12">
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-extrabold text-bharat-blue-900 mb-2">Scholarship Finder</h1>
-        <p className="text-lg text-gray-600">Fill in your details to find scholarships that match your profile. You get 10 tokens for filling your profile!</p>
+        <h1 className="text-4xl font-extrabold text-red-700 mb-2 drop-shadow-md">Scholarship Finder</h1>
+        <p className="text-lg text-gray-700 max-w-3xl mx-auto">
+          Fill in your details to find scholarships that match your profile. You get <span className="font-bold text-green-700">10 tokens</span> for completing your profile!
+        </p>
       </div>
-      
-      <div className="bg-white rounded-xl shadow-lg border p-8 mb-12">
+
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 mb-12 max-w-6xl mx-auto">
         <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
-          {/* Form Fields */}
           <div>
             <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-1">Age</label>
-            <input type="number" name="age" id="age" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-bharat-blue-500 focus:border-bharat-blue-500"/>
+            <input type="number" name="age" id="age" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500" />
           </div>
           <div>
             <label htmlFor="course" className="block text-sm font-medium text-gray-700 mb-1">Course (e.g., B.Tech)</label>
-            <input type="text" name="course" id="course" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-bharat-blue-500 focus:border-bharat-blue-500"/>
+            <input type="text" name="course" id="course" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500" />
           </div>
           <div>
             <label htmlFor="caste" className="block text-sm font-medium text-gray-700 mb-1">Caste Category</label>
-            <select name="caste" id="caste" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-bharat-blue-500 focus:border-bharat-blue-500">
+            <select name="caste" id="caste" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500">
               <option value="">Any</option>
               <option value="OBC">OBC</option>
               <option value="SC">SC</option>
@@ -79,27 +79,27 @@ const ScholarshipPage: React.FC = () => {
           </div>
           <div>
             <label htmlFor="income" className="block text-sm font-medium text-gray-700 mb-1">Annual Family Income (₹)</label>
-            <input type="number" name="income" id="income" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-bharat-blue-500 focus:border-bharat-blue-500"/>
+            <input type="number" name="income" id="income" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500" />
           </div>
           <div>
             <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">State</label>
-            <input type="text" name="state" id="state" placeholder="e.g., Uttar Pradesh" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-bharat-blue-500 focus:border-bharat-blue-500"/>
+            <input type="text" name="state" id="state" placeholder="e.g., Uttar Pradesh" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500" />
           </div>
           <div className="lg:col-span-1">
-            <button type="submit" className="w-full bg-bharat-blue-700 text-white font-bold py-2 px-4 rounded-md hover:bg-bharat-blue-800 transition-colors shadow-md">Find Scholarships</button>
+            <button type="submit" className="w-full bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700 transition-colors shadow-md">Find Scholarships</button>
           </div>
         </form>
       </div>
-      
-      {/* Results */}
-      <div>
+
+      <div className="max-w-6xl mx-auto">
         {searched && results.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {results.map(s => <ScholarshipCard key={s.id} scholarship={s} />)}
           </div>
         )}
+
         {searched && results.length === 0 && (
-          <div className="text-center bg-white rounded-lg p-8 shadow-md">
+          <div className="text-center bg-white rounded-xl p-8 shadow-md">
             <h3 className="text-xl font-semibold text-gray-800">No Matching Scholarships Found</h3>
             <p className="text-gray-600 mt-2">Try adjusting your search criteria. Many general scholarships are available on the National Scholarship Portal.</p>
           </div>
