@@ -1,21 +1,24 @@
 import { Timestamp } from 'firebase/firestore';
 
 export interface SchemeHistoryEntry {
+  scheme_id: string;
   scheme_name: string;
   applied_on: string; // ISO date string
-  hash: string;
+  status: 'applied';
+  hash: string; // For blockchain-style integrity
 }
 
 export interface UserProfile {
   uid: string;
   username: string;
   email: string;
-  birthday: string;
+  birthday: string; // YYYY-MM-DD format
   occupation: string;
-  joined_at: Timestamp | any; // serverTimestamp
+  joined_at: Timestamp | any; // serverTimestamp from Firebase
   auth_provider: 'email' | 'google';
   bharat_tokens: number;
   scheme_history: SchemeHistoryEntry[];
+  last_login?: string; // ISO String, optional
 }
 
 export enum MessageSender {
@@ -78,26 +81,4 @@ export interface RedeemPerk {
   description: string;
   price: number;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-}
-
-// Updated types for Client-Server architecture
-export interface UserProfile {
-  uid: string;
-  username: string;
-  email: string;
-  birthday: string; // YYYY-MM-DD
-  occupation: string;
-  joined_at: string; // ISO String from server
-  auth_provider: 'email' | 'google';
-  bharat_tokens: number;
-  scheme_history: SchemeHistoryEntry[];
-  last_login?: string; // ISO String from server
-}
-
-export interface SchemeHistoryEntry {
-  scheme_id: string;
-  scheme_name: string;
-  applied_on: string; // ISO String from server
-  status: 'applied';
-  hash: string; // For blockchain-style integrity
 }
