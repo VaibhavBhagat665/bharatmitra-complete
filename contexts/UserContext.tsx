@@ -1,121 +1,45 @@
-import React, { createContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
-import { User } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
+import React, { createContext, useState, ReactNode, useEffect, useRef } from 'react';
+import { User, onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
-import { UserProfile } from '../types';
+import { UserProfile, SchemeHistoryEntry } from '../types';
+import { useTextToSpeech } from '../hooks/useTextToSpeech';
 
-
-export const useUser = () => {
-  const context = useContext(UserContext);
-  if (!context) {
-    throw new Error('useUser must be used within a UserProvider');
-  }
-  return context;
-};
-
-export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [userData, setUserData] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      
-      if (firebaseUser) {
-        try {
-          // Fetch user data from Firestore
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
-          
-          if (userDocSnap.exists()) {
-            const userData = userDocSnap.data() as UserProfile;
-            setUserData(userData);
-          } else {
-            console.warn('User document not found in Firestore');
-            setUserData(null);
-          }
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-          setUserData(null);
-        }
-      } else {
-        setUserData(null);
-      }
-      
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const updateUserProfile = async (data: Partial<UserProfile>) => {
-    if (!user) throw new Error('No user logged in');
-    
-    try {
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, data);
-      
-      // Update local state
-      if (userData) {
-        setUserData({ ...userData, ...data });
-      }
-    } catch (error) {
-      console.error('Error updating user profile:', error);
-      throw error;
-    }
-  };
-
-  const value: UserContextType = {
-    user,
-    userData,
-    loading,
-    updateUserProfile,
-  };
-
-  return (
-    <UserContext.Provider value={value}>
-      {children}
-    </UserContext.Provider>
-  );
-};
-const generateUserId = () => `user_${Math.random().toString(36).substr(2, 9)}`;
+// The base URL for your backend server
+const API_BASE_URL = 'http://localhost:8080';
 
 interface UserContextType {
-  userId: string;
-  tokenBalance: number;
-  addTokens: (amount: number) => void;
-  deductTokens: (amount: number) => boolean;
-  language: 'en' | 'hi';
-  setLanguage: (lang: 'en' | 'hi') => void;
-  togglePlayPause: (text: string, id: string, lang: 'en' | 'hi') => void;
-  stopSpeech: () => void;
-  isSpeaking: boolean;
-  isPaused: boolean;
-  activeUtteranceId: string | null;
   user: User | null;
   userData: UserProfile | null;
   loading: boolean;
-  updateUserProfile: (data: Partial<UserProfile>) => Promise<void>;
+  logout: () => Promise<void>;
+  rewardTokens: (amount: number, reason: string) => Promise<void>;
+  redeemPerk: (perkId: string, price: number) => Promise<boolean>;
+  addSchemeToHistory: (scholarshipId: string, scholarshipName: string) => Promise<void>;
+  updateUserProfile: (data: { username: string; birthday: string; occupation: string }) => Promise<void>;
+  language: 'en' | 'hi';
+  setLanguage: React.Dispatch<React.SetStateAction<'en' | 'hi'>>;
+  ttsIsPlaying: boolean;
+  ttsActiveMessageId: string | null;
+  togglePlayPause: (text: string, messageId: string, lang: 'en' | 'hi') => void;
+  cancelTts: () => void;
 }
 
 export const UserContext = createContext<UserContextType>({
-  userId: '',
-  tokenBalance: 0,
-  addTokens: () => {},
-  deductTokens: () => false,
-  language: 'en',
-  setLanguage: () => {},
-  togglePlayPause: () => {},
-  stopSpeech: () => {},
-  isSpeaking: false,
-  isPaused: false,
-  activeUtteranceId: null,
   user: null,
   userData: null,
   loading: true,
+  logout: async () => {},
+  rewardTokens: async () => {},
+  redeemPerk: async () => false,
+  addSchemeToHistory: async () => {},
   updateUserProfile: async () => {},
+  language: 'en',
+  setLanguage: () => {},
+  ttsIsPlaying: false,
+  ttsActiveMessageId: null,
+  togglePlayPause: () => {},
+  cancelTts: () => {},
 });
 
 interface UserProviderProps {
@@ -123,304 +47,184 @@ interface UserProviderProps {
 }
 
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
-  const [userId] = useState<string>(generateUserId());
-  const [tokenBalance, setTokenBalance] = useState<number>(100);
+  const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const idTokenRef = useRef<string | null>(null);
+
   const [language, setLanguage] = useState<'en' | 'hi'>('en');
+  const { isPlaying, isPaused, activeMessageId, togglePlayPause, cancel } = useTextToSpeech();
 
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [activeUtteranceId, setActiveUtteranceId] = useState<string | null>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const isProcessingRef = useRef(false);
-
-  const getIndianMaleVoice = useCallback((lang: 'en' | 'hi') => {
-    const availableVoices = voices.filter(voice => {
-      const name = voice.name.toLowerCase();
-      const voiceLang = voice.lang.toLowerCase();
-      
-      const isIndianMale = (
-        name.includes('male') || 
-        name.includes('man') || 
-        (!name.includes('female') && !name.includes('woman'))
-      );
-      
-      if (lang === 'hi') {
-        return (
-          isIndianMale && (
-            voiceLang.startsWith('hi') || 
-            voiceLang === 'en-in' ||
-            name.includes('indian')
-          )
-        );
-      } else {
-        return (
-          isIndianMale && (
-            voiceLang === 'en-in' || 
-            voiceLang.startsWith('en-') ||
-            name.includes('indian')
-          )
-        );
-      }
-    });
-
-    if (availableVoices.length === 0) {
-      const maleVoices = voices.filter(voice => {
-        const name = voice.name.toLowerCase();
-        return (
-          !name.includes('female') && 
-          !name.includes('woman') &&
-          (lang === 'hi' ? voice.lang.startsWith('hi') || voice.lang.startsWith('en-') : voice.lang.startsWith('en-'))
-        );
-      });
-      return maleVoices[0] || null;
+  const getAuthToken = async (): Promise<string | null> => {
+    if (auth.currentUser) {
+      const token = await auth.currentUser.getIdToken(true);
+      idTokenRef.current = token;
+      return token;
     }
-
-    const preferredVoice = availableVoices.find(voice => {
-      const name = voice.name.toLowerCase();
-      return (
-        name.includes('google') || 
-        name.includes('microsoft') || 
-        name.includes('premium') ||
-        name.includes('neural')
-      );
-    });
-
-    return preferredVoice || availableVoices[0] || null;
-  }, [voices]);
-
-  useEffect(() => {
-    const loadVoices = () => {
-      const loadedVoices = window.speechSynthesis.getVoices();
-      console.log('Available voices:', loadedVoices.map(v => ({ name: v.name, lang: v.lang })));
-      setVoices(loadedVoices);
-    };
-    
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-    
-    return () => {
-        window.speechSynthesis.onvoiceschanged = null;
-        window.speechSynthesis.cancel();
-    };
-  }, []);
-
-  const detectLanguage = useCallback((text: string): 'en' | 'hi' => {
-    const hindiPattern = /[\u0900-\u097F]/;
-    const hindiCharCount = (text.match(/[\u0900-\u097F]/g) || []).length;
-    const totalChars = text.replace(/\s/g, '').length;
-    
-    return hindiCharCount / totalChars > 0.2 ? 'hi' : 'en';
-  }, []);
-
-  const cleanTextForTTS = useCallback((text: string): string => {
-    const phrasesToRemove = [
-      /here\s+is\s+your\s+answer[:\s]*/gi,
-      /here's\s+your\s+answer[:\s]*/gi,
-      /your\s+answer\s+is[:\s]*/gi,
-      /the\s+answer\s+is[:\s]*/gi,
-      /here\s+is\s+the\s+answer\s+to\s+your\s+question[:\s.]*/gi,
-      /hello[,\s]*i\s+am\s+bharat\s+mitra[,\s.]*/gi,
-      /hi[,\s]*i'm\s+bharat\s+mitra[,\s.]*/gi,
-      /greetings[,\s]*i\s+am\s+bharat\s+mitra[,\s.]*/gi,
-      /namaste[,\s]*i\s+am\s+bharat\s+mitra[,\s.]*/gi,
-      /i\s+am\s+bharat\s+mitra[,\s.]*/gi,
-      /thank\s+you\s+for\s+asking[,\s.]*/gi,
-      /thank\s+you\s+for\s+your\s+question[,\s.]*/gi,
-      /that's\s+a\s+great\s+question[,\s.]*/gi,
-      /let\s+me\s+help\s+you[,\s.]*/gi,
-      /sure[,\s]*here\s+is[,\s.]*/gi,
-      /of\s+course[,\s.]*/gi,
-      /absolutely[,\s.]*/gi,
-      /certainly[,\s.]*/gi,
-      
-      /धन्यवाद\s+पूछने\s+के\s+लिए[,\s.]*/gi,
-      /आपका\s+स्वागत\s+है[,\s.]*/gi,
-      /यहाँ\s+आपके\s+सवाल\s+का\s+जवाब\s+है[:\s.]*/gi,
-      /आपके\s+प्रश्न\s+का\s+उत्तर\s+यहाँ\s+है[:\s.]*/gi,
-      /नमस्ते[,\s]*मैं\s+भारत\s+मित्र\s+हूँ[,\s.]*/gi,
-      /मैं\s+भारत\s+मित्र\s+हूँ[,\s.]*/gi,
-      
-      /\*\*[^*]*\*\*/g,
-      /\*[^*]*\*/g,
-      /#{1,6}\s/g,
-      /```[\s\S]*?```/g,
-      /`[^`]*`/g,
-      /\[[^\]]*\]\([^)]*\)/g,
-    ];
-
-    let cleanedText = text;
-    
-    phrasesToRemove.forEach(pattern => {
-      cleanedText = cleanedText.replace(pattern, '');
-    });
-
-    cleanedText = cleanedText
-      .replace(/\s+/g, ' ')
-      .replace(/^\s*[,.\-:;।]\s*/, '')
-      .replace(/\s*[,.\-:;।]\s*$/, '')
-      .replace(/^[.\s]+/, '')
-      .trim();
-
-    return cleanedText;
-  }, []);
-
-  const stopSpeech = useCallback(() => {
-    const synth = window.speechSynthesis;
-    if (synth.speaking || synth.pending) {
-      synth.cancel();
-    }
-    setIsSpeaking(false);
-    setIsPaused(false);
-    setActiveUtteranceId(null);
-    utteranceRef.current = null;
-    isProcessingRef.current = false;
-  }, []);
-
-  const togglePlayPause = useCallback((text: string, id: string, contextLang: 'en' | 'hi') => {
-    if (isProcessingRef.current) {
-      console.log('Already processing, ignoring call');
-      return;
-    }
-    
-    isProcessingRef.current = true;
-    const synth = window.speechSynthesis;
-    const isThisMessageActive = id === activeUtteranceId;
-
-    try {
-      if (synth.speaking && isThisMessageActive && utteranceRef.current) {
-        if (synth.paused) {
-          synth.resume();
-          setIsPaused(false);
-        } else {
-          synth.pause();
-          setIsPaused(true);
-        }
-        isProcessingRef.current = false;
-        return;
-      }
-
-      if (synth.speaking || synth.pending) {
-        synth.cancel();
-      }
-
-      const cleanedText = cleanTextForTTS(text);
-      
-      if (!cleanedText.trim()) {
-        console.warn('No content to speak after cleaning');
-        isProcessingRef.current = false;
-        return;
-      }
-
-      const detectedLang = detectLanguage(cleanedText);
-      
-      const voiceLang = contextLang === 'hi' ? 'hi' : detectedLang;
-
-      console.log(`Speaking in ${voiceLang} (context: ${contextLang}, detected: ${detectedLang}):`, cleanedText.substring(0, 100) + '...');
-
-      const utterance = new SpeechSynthesisUtterance(cleanedText);
-      utteranceRef.current = utterance;
-
-      const voice = getIndianMaleVoice(voiceLang);
-      if (voice) {
-        utterance.voice = voice;
-        utterance.lang = voice.lang;
-        console.log(`Selected voice: ${voice.name} (${voice.lang})`);
-      } else {
-        utterance.lang = voiceLang === 'hi' ? 'hi-IN' : 'en-IN';
-        console.log(`No specific voice found, using lang: ${utterance.lang}`);
-      }
-      
-      utterance.rate = 0.85; 
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-
-      utterance.onstart = () => {
-        console.log('Speech started for:', id);
-        setIsSpeaking(true);
-        setIsPaused(false);
-        setActiveUtteranceId(id);
-        isProcessingRef.current = false;
-      };
-      
-      utterance.onpause = () => {
-        console.log('Speech paused');
-        setIsPaused(true);
-      };
-      
-      utterance.onresume = () => {
-        console.log('Speech resumed');
-        setIsPaused(false);
-      };
-      
-      utterance.onend = () => {
-        console.log('Speech ended for:', id);
-        setIsSpeaking(false);
-        setIsPaused(false);
-        setActiveUtteranceId(null);
-        utteranceRef.current = null;
-        isProcessingRef.current = false;
-      };
-      
-      utterance.onerror = (e) => {
-        console.error("SpeechSynthesis Error:", e);
-        setIsSpeaking(false);
-        setIsPaused(false);
-        setActiveUtteranceId(null);
-        utteranceRef.current = null;
-        isProcessingRef.current = false;
-      };
-      
-      setTimeout(() => {
-        if (utteranceRef.current === utterance && !synth.speaking) {
-          synth.speak(utterance);
-        } else {
-          isProcessingRef.current = false;
-        }
-      }, 100);
-
-    } catch (error) {
-      console.error('Error in togglePlayPause:', error);
-      isProcessingRef.current = false;
-      setIsSpeaking(false);
-      setIsPaused(false);
-      setActiveUtteranceId(null);
-    }
-  }, [activeUtteranceId, getIndianMaleVoice, cleanTextForTTS, detectLanguage]);
+    return null;
+  };
   
   useEffect(() => {
-    stopSpeech();
-  }, [language, stopSpeech]);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        try {
+          const token = await firebaseUser.getIdToken();
+          idTokenRef.current = token;
 
-  const addTokens = (amount: number) => {
-    setTokenBalance(prevBalance => prevBalance + amount);
+          const response = await fetch(`${API_BASE_URL}/api/user-profile`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (response.status === 404) {
+             // User exists in Auth, but not in Firestore. Create profile.
+             // This happens for new sign-ups.
+             const isNewUser = firebaseUser.metadata.creationTime === firebaseUser.metadata.lastSignInTime;
+             if (isNewUser) {
+                console.log("New user detected, creating profile...");
+                const userRef = doc(db, 'users', firebaseUser.uid);
+                const newUserProfile: Omit<UserProfile, 'joined_at' | 'last_login' | 'scheme_history' | 'hash'> = {
+                    uid: firebaseUser.uid,
+                    username: firebaseUser.displayName || 'New User',
+                    email: firebaseUser.email || '',
+                    birthday: '',
+                    occupation: '',
+                    auth_provider: firebaseUser.providerData[0].providerId.includes('google') ? 'google' : 'email',
+                    bharat_tokens: 50, // Welcome bonus
+                };
+                
+                // We use the client SDK here just for the initial write.
+                await setDoc(userRef, {
+                    ...newUserProfile,
+                    joined_at: serverTimestamp(),
+                    last_login: serverTimestamp(),
+                    scheme_history: [],
+                });
+                
+                // Re-fetch the newly created profile from the backend
+                const secondAttempt = await fetch(`${API_BASE_URL}/api/user-profile`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if(!secondAttempt.ok) throw new Error('Failed to fetch newly created profile');
+                const profileData = await secondAttempt.json();
+                setUserData(profileData);
+
+             }
+          } else if (response.ok) {
+            const profileData = await response.json();
+            setUserData(profileData);
+          } else {
+            throw new Error(`Failed to fetch user profile: ${response.statusText}`);
+          }
+        } catch (error) {
+          console.error("Error during user setup:", error);
+          await logout();
+        }
+      } else {
+        setUser(null);
+        setUserData(null);
+        idTokenRef.current = null;
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const logout = async () => {
+    await signOut(auth);
+    setUser(null);
+    setUserData(null);
+    idTokenRef.current = null;
   };
 
-  const deductTokens = (amount: number): boolean => {
-    if (tokenBalance >= amount) {
-      setTokenBalance(prevBalance => prevBalance - amount);
-      return true;
+  const updateUserProfile = async (data: { username: string; birthday: string; occupation: string }) => {
+    const token = await getAuthToken();
+    if (!token) return;
+
+    const response = await fetch(`${API_BASE_URL}/api/user-profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+    });
+
+    if (response.ok) {
+        const updatedProfile = await response.json();
+        setUserData(updatedProfile);
+    } else {
+        throw new Error('Failed to update profile');
+    }
+  };
+  
+  const addSchemeToHistory = async (scholarshipId: string, scholarshipName: string) => {
+    const token = await getAuthToken();
+    if (!token) return;
+
+    const response = await fetch(`${API_BASE_URL}/api/apply-scheme`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ scholarshipId, scholarshipName }),
+    });
+
+    if (response.ok) {
+        const updatedProfile = await response.json();
+        setUserData(updatedProfile);
+    } else {
+        throw new Error('Failed to apply for scheme');
+    }
+  };
+
+  const rewardTokens = async (amount: number, reason: string) => {
+    const token = await getAuthToken();
+    if (!token) return;
+    
+    const response = await fetch(`${API_BASE_URL}/api/reward-tokens`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ amount, reason }),
+    });
+
+    if(response.ok) {
+        const { newTotal } = await response.json();
+        setUserData(prev => prev ? { ...prev, bharat_tokens: newTotal } : null);
+    }
+  };
+
+  const redeemPerk = async (perkId: string, price: number): Promise<boolean> => {
+     const token = await getAuthToken();
+     if (!token || !userData || userData.bharat_tokens < price) return false;
+
+     const response = await fetch(`${API_BASE_URL}/api/redeem-perk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ perkId, price }),
+    });
+    
+    if (response.ok) {
+        const { newTotal } = await response.json();
+        setUserData(prev => prev ? { ...prev, bharat_tokens: newTotal } : null);
+        return true;
     }
     return false;
   };
 
   const value = {
-    userId,
-    tokenBalance,
-    addTokens,
-    deductTokens,
+    user,
+    userData,
+    loading,
+    logout,
+    updateUserProfile,
+    addSchemeToHistory,
+    rewardTokens,
+    redeemPerk,
     language,
     setLanguage,
+    ttsIsPlaying: isPlaying && !isPaused,
+    ttsActiveMessageId: activeMessageId,
     togglePlayPause,
-    stopSpeech,
-    isSpeaking,
-    isPaused,
-    activeUtteranceId,
+    cancelTts: cancel,
   };
 
-  return (
-    <UserContext.Provider value={value}>
-      {children}
-    </UserContext.Provider>
-  );
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };
