@@ -22,6 +22,9 @@ interface UserContextType {
   ttsActiveMessageId: string | null;
   togglePlayPause: (text: string, messageId: string, lang: 'en' | 'hi') => void;
   cancelTts: () => void;
+  // For compatibility with RedeemPage
+  tokenBalance: number;
+  deductTokens: (amount: number) => boolean;
 }
 
 export const UserContext = createContext<UserContextType>({
@@ -41,6 +44,8 @@ export const UserContext = createContext<UserContextType>({
   ttsActiveMessageId: null,
   togglePlayPause: () => {},
   cancelTts: () => {},
+  tokenBalance: 0,
+  deductTokens: () => false,
 });
 
 interface UserProviderProps {
@@ -71,7 +76,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           occupation: data.occupation,
           joined_at: data.joined_at,
           auth_provider: data.auth_provider,
-          bharat_tokens: data.bharat_tokens,
+          bharat_tokens: data.bharat_tokens || 0, // Default to 0 if not set
           scheme_history: data.scheme_history || [],
         };
       }
@@ -88,6 +93,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     try {
       const profileData = await fetchUserData(user.uid);
       setUserData(profileData);
+      console.log('User data refreshed. Token balance:', profileData?.bharat_tokens);
     } catch (error) {
       console.error('Error refreshing user data:', error);
     }
@@ -108,6 +114,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           setUserData(profileData);
           
           console.log('User authenticated successfully:', firebaseUser.uid);
+          console.log('Current token balance:', profileData?.bharat_tokens);
         } catch (error: any) {
           console.error('Authentication error:', error);
           setAuthError(error.message || 'Authentication failed');
@@ -260,7 +267,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
       setUserData(prev => prev ? { ...prev, bharat_tokens: newTokenAmount } : null);
       
-      console.log(`Rewarded ${amount} tokens for: ${reason}`);
+      console.log(`Rewarded ${amount} tokens for: ${reason}. New balance: ${newTokenAmount}`);
     } catch (error) {
       console.error('Error rewarding tokens:', error);
       throw error;
@@ -269,8 +276,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
   const redeemPerk = async (perkId: string, price: number): Promise<boolean> => {
     if (!user || !userData) {
-      throw new Error('User not authenticated');
+      console.error('User not authenticated');
+      return false;
     }
+
+    console.log(`Attempting to redeem perk ${perkId} for ${price} tokens`);
+    console.log(`Current token balance: ${userData.bharat_tokens}`);
 
     if (userData.bharat_tokens < price) {
       console.warn('Insufficient tokens for perk redemption');
@@ -287,10 +298,28 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
       setUserData(prev => prev ? { ...prev, bharat_tokens: newTokenAmount } : null);
       
-      console.log(`Redeemed perk ${perkId} for ${price} tokens`);
+      console.log(`Successfully redeemed perk ${perkId} for ${price} tokens. New balance: ${newTokenAmount}`);
       return true;
     } catch (error) {
       console.error('Error redeeming perk:', error);
+      return false;
+    }
+  };
+
+  // Compatibility function for RedeemPage
+  const deductTokens = (amount: number): boolean => {
+    if (!user || !userData) {
+      console.error('User not authenticated for token deduction');
+      return false;
+    }
+
+    console.log(`Checking if can deduct ${amount} tokens from balance ${userData.bharat_tokens}`);
+    
+    if (userData.bharat_tokens >= amount) {
+      // Note: This is just a check, actual deduction happens in redeemPerk
+      return true;
+    } else {
+      console.warn(`Insufficient tokens: need ${amount}, have ${userData.bharat_tokens}`);
       return false;
     }
   };
@@ -323,6 +352,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     ttsActiveMessageId: activeMessageId,
     togglePlayPause,
     cancelTts: cancel,
+    // Compatibility properties for RedeemPage
+    tokenBalance: userData?.bharat_tokens || 0,
+    deductTokens,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
