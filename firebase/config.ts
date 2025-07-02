@@ -1,9 +1,7 @@
-import { initializeApp } from "firebase/app"; // Fixed import
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// IMPORTANT: Replace with your app's Firebase project configuration
-// You can get this from the Firebase console under Project settings.
 const firebaseConfig = {
   apiKey: "AIzaSyCvHJJN7fhDPJJa_UZsBTyX9QYDj4t4vu4",
   authDomain: "bharat-base.firebaseapp.com",
@@ -14,10 +12,20 @@ const firebaseConfig = {
   measurementId: "G-4QK76486QW"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize and export Firebase services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
+
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    console.log("Auth persistence set to local");
+  })
+  .catch((error) => {
+    console.error("Error setting auth persistence:", error);
+  });
+
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
