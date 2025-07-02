@@ -59,10 +59,68 @@ declare global {
 
 const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-// Utility function to detect language from text
+// Improved language detection function
 const detectLanguage = (text: string): 'en' | 'hi' => {
-    const hindiRegex = /[\u0900-\u097F]/;
-    return hindiRegex.test(text) ? 'hi' : 'en';
+    const cleanText = text.toLowerCase().trim();
+    
+    // Check for Devanagari script (Hindi)
+    const devanagariRegex = /[\u0900-\u097F]/;
+    if (devanagariRegex.test(text)) {
+        return 'hi';
+    }
+    
+    // Common Hindi words written in English (Hinglish)
+    const hindiWords = [
+        'kya', 'hai', 'hum', 'aap', 'yeh', 'woh', 'kaise', 'kahan', 'kab', 'kyun',
+        'mera', 'tera', 'uska', 'hamara', 'tumhara', 'unka', 'main', 'tu', 'wo',
+        'nahin', 'nahi', 'haan', 'ji', 'sahab', 'bhai', 'didi', 'uncle', 'aunty',
+        'ghar', 'paisa', 'paise', 'rupee', 'rupaye', 'scheme', 'yojana', 'sarkar',
+        'pradhan', 'mantri', 'modi', 'bharat', 'india', 'desh', 'gaon', 'shahar',
+        'kisan', 'majdoor', 'vyavasaya', 'business', 'naukri', 'job', 'padhna',
+        'likhna', 'samjhna', 'batana', 'puchna', 'kahna', 'sunna', 'dekhna',
+        'achha', 'bura', 'sahi', 'galat', 'theek', 'dhanyawad', 'namaste'
+    ];
+    
+    // Check for Hindi keywords
+    const words = cleanText.split(/\s+/);
+    const hindiWordsFound = words.filter(word => 
+        hindiWords.some(hindiWord => word.includes(hindiWord))
+    ).length;
+    
+    // If more than 30% words are Hindi-related, consider it Hindi
+    if (hindiWordsFound > 0 && (hindiWordsFound / words.length) > 0.3) {
+        return 'hi';
+    }
+    
+    // Check for English patterns
+    const englishWords = [
+        'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our',
+        'what', 'when', 'where', 'who', 'why', 'how', 'this', 'that', 'these', 'those', 'they', 'them',
+        'have', 'has', 'will', 'would', 'could', 'should', 'shall', 'may', 'might', 'must',
+        'government', 'scheme', 'application', 'benefit', 'eligibility', 'document', 'registration'
+    ];
+    
+    const englishWordsFound = words.filter(word => 
+        englishWords.includes(word)
+    ).length;
+    
+    // If significant English words found, consider it English
+    if (englishWordsFound > 0 && (englishWordsFound / words.length) > 0.2) {
+        return 'en';
+    }
+    
+    // Default fallback: if text length > 10 and contains more consonants typical of Hindi transliteration
+    const hindiConsonants = ['dh', 'bh', 'gh', 'kh', 'ph', 'th', 'ch', 'jh', 'nh', 'sh'];
+    const hindiConsonantCount = hindiConsonants.reduce((count, consonant) => 
+        count + (cleanText.match(new RegExp(consonant, 'g')) || []).length, 0
+    );
+    
+    if (hindiConsonantCount > 1) {
+        return 'hi';
+    }
+    
+    // Default to English if uncertain
+    return 'en';
 };
 
 // Utility function to check if text is meaningful
@@ -71,7 +129,7 @@ const isMeaningfulText = (text: string): boolean => {
     if (cleanText.length < 2) return false;
     
     // Filter out common noise words
-    const noiseWords = ['uh', 'um', 'ah', 'hmm', 'hm'];
+    const noiseWords = ['uh', 'um', 'ah', 'hmm', 'hm', 'er', 'uhm'];
     const words = cleanText.toLowerCase().split(/\s+/);
     const meaningfulWords = words.filter(word => !noiseWords.includes(word));
     
@@ -115,11 +173,11 @@ export const useSpeechRecognition = () => {
         }
 
         const detectedLang = detectLanguage(finalText);
+        console.log('Detected language for text:', finalText, '-> Language:', detectedLang);
+        
         setDetectedLanguage(detectedLang);
         setTranscript(finalText);
         setIsComplete(true);
-        
-        console.log('Final processed result:', finalText, 'Language:', detectedLang);
     }, []);
 
     const startListening = useCallback(() => {
@@ -145,10 +203,10 @@ export const useSpeechRecognition = () => {
         const recognition = new SpeechRecognitionAPI();
         recognitionRef.current = recognition;
         
-        // Configure recognition
-        recognition.continuous = false; // Changed to false to prevent multiple results
+        // Configure recognition - use auto language detection
+        recognition.continuous = false;
         recognition.interimResults = true;
-        recognition.lang = 'hi-IN'; // Start with Hindi as primary language
+        recognition.lang = 'en-IN'; // Use English-India as base, it often picks up Hindi too
         recognition.maxAlternatives = 1;
 
         // Reset state
@@ -164,7 +222,6 @@ export const useSpeechRecognition = () => {
         };
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
-            // Check if this is still the active session
             if (sessionIdRef.current !== currentSessionId || !isActiveRef.current) {
                 return;
             }
@@ -172,7 +229,6 @@ export const useSpeechRecognition = () => {
             let interimTranscript = '';
             let finalTranscript = '';
 
-            // Process all results
             for (let i = 0; i < event.results.length; i++) {
                 const result = event.results[i];
                 const transcript = result[0].transcript;
@@ -185,17 +241,15 @@ export const useSpeechRecognition = () => {
                 }
             }
 
-            // Update display with current transcript
             const currentText = finalTranscript || interimTranscript;
             if (currentText.trim()) {
                 setTranscript(currentText.trim());
                 
-                // Detect language from current text
+                // Update language detection in real-time
                 const detectedLang = detectLanguage(currentText);
                 setDetectedLanguage(detectedLang);
             }
 
-            // If we have a final result, process it
             if (finalTranscript.trim()) {
                 console.log('Final result received:', finalTranscript);
                 setTimeout(() => {
@@ -205,7 +259,6 @@ export const useSpeechRecognition = () => {
                     }
                 }, 100);
             } else if (interimTranscript.trim()) {
-                // Set a timeout for interim results
                 if (timeoutRef.current) {
                     clearTimeout(timeoutRef.current);
                 }
@@ -219,7 +272,7 @@ export const useSpeechRecognition = () => {
                         }
                         cleanup();
                     }
-                }, 2000); // 2 second timeout
+                }, 2000);
             }
         };
 
@@ -227,7 +280,6 @@ export const useSpeechRecognition = () => {
             console.log('Speech recognition ended - Session:', currentSessionId);
             
             if (sessionIdRef.current === currentSessionId) {
-                // If we have a final result, process it
                 if (finalResultRef.current.trim()) {
                     processResult(finalResultRef.current.trim());
                 }
@@ -247,30 +299,29 @@ export const useSpeechRecognition = () => {
             switch (event.error) {
                 case 'not-allowed':
                 case 'service-not-allowed':
-                    setError('माइक्रोफोन की अनुमति नहीं है। कृपया ब्राउज़र सेटिंग्स में माइक्रोफोन की अनुमति दें।');
+                    setError('Microphone permission denied. Please allow microphone access.');
                     break;
                 case 'network':
-                    setError('नेटवर्क त्रुटि। कृपया अपना कनेक्शन जांचें।');
+                    setError('Network error. Please check your connection.');
                     break;
                 case 'audio-capture':
-                    setError('माइक्रोफोन एक्सेस नहीं हो सका। कृपया माइक्रोफोन जांचें।');
+                    setError('Could not access microphone. Please check your microphone.');
                     break;
                 case 'no-speech':
-                    setError('कोई आवाज़ नहीं सुनाई दी। कृपया फिर से कोशिश करें।');
+                    setError('No speech detected. Please try again.');
                     break;
                 default:
-                    setError(`त्रुटि: ${event.error}`);
+                    setError(`Error: ${event.error}`);
             }
             
             cleanup();
         };
 
-        // Start recognition
         try {
             recognition.start();
         } catch (err) {
             console.error('Failed to start recognition:', err);
-            setError('स्पीच रिकग्निशन शुरू नहीं हो सका। कृपया फिर से कोशिश करें।');
+            setError('Could not start speech recognition. Please try again.');
             cleanup();
         }
     }, [cleanup, processResult]);
@@ -286,7 +337,6 @@ export const useSpeechRecognition = () => {
         finalResultRef.current = '';
     }, []);
 
-    // Cleanup on unmount
     useEffect(() => {
         return () => {
             cleanup();
