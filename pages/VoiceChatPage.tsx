@@ -45,11 +45,6 @@ const EnhancedVoiceChatPage: React.FC = () => {
     try {
       const aiResponseText = await getSchemeAdvice(query, language);
       
-      // Create contextual greeting based on detected language
-      const friendlyGreeting = language === 'hi'
-        ? `नमस्ते! मैं भारत मित्र हूँ।\n\n`
-        : `Hello! I am Bharat Mitra.\n\n`;
-
       const aiMessage: ChatMessageType = {
         id: `ai-${Date.now()}-${Math.random()}`,
         sender: MessageSender.AI,
@@ -59,10 +54,9 @@ const EnhancedVoiceChatPage: React.FC = () => {
       
       setMessages(prev => [...prev, aiMessage]);
       
-      // Auto-play the AI response in the same language as user input
-      const fullResponse = friendlyGreeting + aiResponseText;
+      // Auto-play the AI response
       setTimeout(() => {
-        togglePlayPause(fullResponse, aiMessage.id, language);
+        togglePlayPause(aiResponseText, aiMessage.id, language);
       }, 300);
       
       addTokens(10);
@@ -70,8 +64,8 @@ const EnhancedVoiceChatPage: React.FC = () => {
       console.error('Error fetching AI response:', error);
       
       const errorText = language === 'hi' 
-        ? 'माफ करें, मुझे एक त्रुटि का सामना करना पड़ा। कृपया पुनः प्रयास करें।'
-        : 'Sorry, I encountered an error. Please try again.';
+        ? 'माफ करें, कुछ गलत हुआ। फिर से कोशिश करें।'
+        : 'Sorry, something went wrong. Please try again.';
         
       const errorMessage: ChatMessageType = {
         id: `error-${Date.now()}-${Math.random()}`,
@@ -88,7 +82,6 @@ const EnhancedVoiceChatPage: React.FC = () => {
     }
   }, [addTokens, togglePlayPause, isProcessingAI, resetSession]);
 
-  // Handle completed speech recognition
   useEffect(() => {
     if (isComplete && transcript.trim() && !isProcessingAI) {
       console.log('Speech complete, processing:', transcript);
@@ -96,7 +89,6 @@ const EnhancedVoiceChatPage: React.FC = () => {
     }
   }, [isComplete, transcript, detectedLanguage, handleAiResponse, isProcessingAI]);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -117,7 +109,7 @@ const EnhancedVoiceChatPage: React.FC = () => {
   const getButtonState = () => {
     if (isProcessingAI) {
       return { 
-        text: "प्रसंस्करण हो रहा है... / Processing...", 
+        text: "Processing...", 
         color: "bg-yellow-500 animate-pulse", 
         disabled: true 
       };
@@ -125,14 +117,14 @@ const EnhancedVoiceChatPage: React.FC = () => {
     
     if (isListening) {
       return { 
-        text: "सुन रहा हूँ... बंद करने के लिए टैप करें / Listening... Tap to Stop", 
+        text: "Listening... Tap to Stop", 
         color: "bg-red-500 animate-pulse", 
         disabled: false 
       };
     }
     
     return { 
-      text: "बोलने के लिए टैप करें / Tap to Speak", 
+      text: "Tap to Speak", 
       color: "bg-green-600 hover:bg-green-700", 
       disabled: false 
     };
@@ -140,33 +132,21 @@ const EnhancedVoiceChatPage: React.FC = () => {
 
   const buttonState = getButtonState();
 
-  const getWelcomeMessage = () => {
-    return {
-      hindi: "नमस्ते! मैं भारत मित्र हूँ। कृपया माइक्रोफोन पर टैप करके अपना प्रश्न हिंदी या अंग्रेजी में पूछें।",
-      english: "Namaste! I am Bharat Mitra. Please tap the microphone and ask your question in Hindi or English."
-    };
-  };
-
-  const welcomeMessage = getWelcomeMessage();
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-saffron-50 to-green-50 px-4 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-green-50 px-4 py-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-green-600 bg-clip-text text-transparent mb-2">
-            🎙️ भारत मित्र Voice Chat
+            🎙️ Bharat Mitra Voice Chat
           </h1>
           <p className="text-gray-600 text-lg">
-            हिंदी या English में बोलें - मैं उसी भाषा में जवाब दूंगा!
-          </p>
-          <p className="text-gray-500">
-            Speak in Hindi or English - I'll respond in the same language!
+            Ask your questions in Hindi or English
           </p>
           
           {detectedLanguage && transcript && (
             <div className="mt-3 inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
-              🗣️ भाषा / Language: {detectedLanguage === 'hi' ? 'हिंदी (Hindi)' : 'English (अंग्रेजी)'}
+              🗣️ Detected: {detectedLanguage === 'hi' ? 'Hindi' : 'English'}
             </div>
           )}
         </div>
@@ -179,17 +159,18 @@ const EnhancedVoiceChatPage: React.FC = () => {
               <div className="text-center text-gray-600 flex flex-col items-center justify-center h-full space-y-4">
                 <div className="text-6xl animate-bounce">🤖</div>
                 <div className="space-y-2">
-                  <p className="text-lg font-medium text-orange-700">{welcomeMessage.hindi}</p>
-                  <p className="text-lg font-medium text-green-700">{welcomeMessage.english}</p>
+                  <p className="text-lg font-medium text-gray-700">
+                    Welcome! I'm Bharat Mitra. Ask me about government schemes and benefits.
+                  </p>
                 </div>
-                <div className="flex items-center space-x-4 text-sm text-gray-500">
+                <div className="flex items-center space-x-6 text-sm text-gray-500">
                   <span className="flex items-center">
                     <span className="w-3 h-3 bg-orange-400 rounded-full mr-2"></span>
-                    हिंदी में बोलें
+                    Hindi Supported
                   </span>
                   <span className="flex items-center">
                     <span className="w-3 h-3 bg-green-400 rounded-full mr-2"></span>
-                    Speak in English
+                    English Supported
                   </span>
                 </div>
               </div>
@@ -222,9 +203,9 @@ const EnhancedVoiceChatPage: React.FC = () => {
                   <div className="text-blue-400 text-xl">🎯</div>
                   <div className="flex-1">
                     <p className="text-blue-800 text-sm font-medium mb-1">
-                      {detectedLanguage === 'hi' ? 'आपका संदेश:' : 'Your Message:'}
+                      Your Message:
                       <span className="ml-2 text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">
-                        {detectedLanguage === 'hi' ? 'हिंदी' : 'English'}
+                        {detectedLanguage === 'hi' ? 'Hindi' : 'English'}
                       </span>
                     </p>
                     <p className="text-blue-900 text-lg leading-relaxed">{transcript}</p>
@@ -259,7 +240,7 @@ const EnhancedVoiceChatPage: React.FC = () => {
                 </p>
                 {isListening && (
                   <p className="text-sm text-gray-500 mt-2 animate-pulse">
-                    🔊 स्पष्ट रूप से बोलें / Speak clearly
+                    🔊 Speak clearly
                   </p>
                 )}
               </div>
@@ -268,19 +249,10 @@ const EnhancedVoiceChatPage: React.FC = () => {
         </div>
 
         {/* Tips Section */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-            <h3 className="font-semibold text-orange-800 mb-2">🇮🇳 हिंदी में बोलें</h3>
-            <p className="text-orange-700">
-              स्पष्ट रूप से हिंदी में अपना प्रश्न पूछें। मैं हिंदी में जवाब दूंगा।
-            </p>
-          </div>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <h3 className="font-semibold text-green-800 mb-2">🇬🇧 Speak in English</h3>
-            <p className="text-green-700">
-              Ask your question clearly in English. I will respond in English.
-            </p>
-          </div>
+        <div className="mt-6 bg-white/50 rounded-lg p-4 text-center">
+          <p className="text-gray-600">
+            💡 Tip: Speak naturally in either Hindi or English. The system will automatically detect your language.
+          </p>
         </div>
       </div>
     </div>
