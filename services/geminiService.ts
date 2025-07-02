@@ -7,7 +7,7 @@ if (!API_KEY) {
   console.error("API_KEY environment variable not set. Using placeholder response.");
 }
 
-const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
+const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 const getSystemInstruction = (lang: 'en' | 'hi') => {
     const langInstruction = lang === 'hi' ? 
@@ -60,7 +60,7 @@ export const getSchemeAdvice = async (
   lang: 'en' | 'hi',
   conversationHistory: ChatMessageType[] = []
 ): Promise<string> => {
-  if (!genAI) {
+  if (!ai) {
     const mockResponse = lang === 'hi'
       ? "यह एक मॉक प्रतिक्रिया है क्योंकि एपीआई कुंजी कॉन्फ़िगर नहीं है। वास्तविक परिदृश्य में, मैं आपके द्वारा मांगी गई योजना के बारे में विस्तृत जानकारी प्रदान करूंगा और पिछली बातचीत को भी याद रखूंगा।"
       : "This is a mock response as the API key is not configured. In a real scenario, I would provide detailed information and remember our previous conversation.";
@@ -68,63 +68,30 @@ export const getSchemeAdvice = async (
   }
   
   try {
-    // Use the correct stable model name
-    const model: GenerativeModel = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash-preview-04-17",  // Updated to stable version
-      systemInstruction: getSystemInstruction(lang)
-    });
-    
     // Build the full query with conversation context
     const contextualQuery = conversationHistory.length > 0 
       ? `${buildConversationHistory(conversationHistory)}${query}`
       : query;
     
-    // Use the correct API method
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: contextualQuery }] }],
-      generationConfig: {
-        temperature: 0.5,
-        topP: 0.95,
-        topK: 64,
-        maxOutputTokens: 1024,
-      }
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-preview-04-17',
+        contents: contextualQuery,
+        config: {
+            systemInstruction: getSystemInstruction(lang),
+            temperature: 0.5,
+            topP: 0.95,
+            topK: 64,
+        }
     });
     
-    const response = await result.response;
-    const text = response.text();
-    
-    if (!text) {
-      throw new Error('Empty response from API');
-    }
-    
-    const cleanedResponse = cleanMarkdownFromResponse(text);
+    const cleanedResponse = cleanMarkdownFromResponse(response.text());
     
     return cleanedResponse;
   } catch (error) {
     console.error("Error calling Gemini API:", error);
-    
-    // More specific error handling
-    let errorMsg = lang === 'hi'
+    const errorMsg = lang === 'hi'
       ? "खुशी है कि मैं अभी अपने ज्ञान आधार से जुड़ने में परेशानी हो रही है। कृपया एक पल में फिर कोशिश करें।"
       : "I'm sorry, I'm having trouble connecting to my knowledge base right now. Please try again in a moment.";
-    
-    // Check for specific error types
-    if (error instanceof Error) {
-      if (error.message.includes('API_KEY')) {
-        errorMsg = lang === 'hi'
-          ? "एपीआई कुंजी की समस्या है। कृपया कॉन्फ़िगरेशन जांचें।"
-          : "There's an API key issue. Please check the configuration.";
-      } else if (error.message.includes('quota') || error.message.includes('limit')) {
-        errorMsg = lang === 'hi'
-          ? "एपीआई सीमा पार हो गई है। कृपया बाद में कोशिश करें।"
-          : "API limit exceeded. Please try again later.";
-      } else if (error.message.includes('network') || error.message.includes('fetch')) {
-        errorMsg = lang === 'hi'
-          ? "नेटवर्क की समस्या है। कृपया अपना इंटरनेट कनेक्शन जांचें।"
-          : "Network issue. Please check your internet connection.";
-      }
-    }
-    
     return errorMsg;
   }
 };
