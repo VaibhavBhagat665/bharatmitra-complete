@@ -10,7 +10,7 @@ import ChatMessage from '../components/ChatMessage';
 const VoiceChatPage: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
-  const { addTokens, language, setLanguage } = useContext(UserContext); // Use language from context
+  const { addTokens, language, setLanguage } = useContext(UserContext);
   const { 
     isListening, 
     transcript, 
@@ -39,47 +39,55 @@ const VoiceChatPage: React.FC = () => {
       timestamp: new Date().toISOString(),
     };
     
-    setMessages(prev => [...prev, userMessage]);
-
-    try {
-      // Use the context language instead of detected language
-      const aiResponseText = await getSchemeAdvice(query, language);
+    // Update messages with user message first
+    setMessages(prev => {
+      const updatedMessages = [...prev, userMessage];
       
-      const aiMessage: ChatMessageType = {
-        id: `ai-${Date.now()}-${Math.random()}`,
-        sender: MessageSender.AI,
-        text: aiResponseText,
-        timestamp: new Date().toISOString(),
-      };
+      // Call AI with conversation history (async but don't wait)
+      (async () => {
+        try {
+          // Pass conversation history excluding the current user message being processed
+          const aiResponseText = await getSchemeAdvice(query, language, prev);
+          
+          const aiMessage: ChatMessageType = {
+            id: `ai-${Date.now()}-${Math.random()}`,
+            sender: MessageSender.AI,
+            text: aiResponseText,
+            timestamp: new Date().toISOString(),
+          };
+          
+          setMessages(prevMessages => [...prevMessages, aiMessage]);
+          
+          // Auto-play the AI response
+          setTimeout(() => {
+            togglePlayPause(aiResponseText, aiMessage.id, language);
+          }, 300);
+          
+          addTokens(10);
+        } catch (error) {
+          console.error('Error fetching AI response:', error);
+          
+          const errorText = language === 'hi' 
+            ? 'माफ करें, कुछ गलत हुआ। फिर से कोशिश करें।'
+            : 'Sorry, something went wrong. Please try again.';
+            
+          const errorMessage: ChatMessageType = {
+            id: `error-${Date.now()}-${Math.random()}`,
+            sender: MessageSender.AI,
+            text: errorText,
+            timestamp: new Date().toISOString(),
+          };
+          
+          setMessages(prevMessages => [...prevMessages, errorMessage]);
+        } finally {
+          setIsProcessingAI(false);
+          resetSession();
+          processedTranscriptRef.current = '';
+        }
+      })();
       
-      setMessages(prev => [...prev, aiMessage]);
-      
-      // Auto-play the AI response with the selected language from context
-      setTimeout(() => {
-        togglePlayPause(aiResponseText, aiMessage.id, language);
-      }, 300);
-      
-      addTokens(10);
-    } catch (error) {
-      console.error('Error fetching AI response:', error);
-      
-      const errorText = language === 'hi' 
-        ? 'माफ करें, कुछ गलत हुआ। फिर से कोशिश करें।'
-        : 'Sorry, something went wrong. Please try again.';
-        
-      const errorMessage: ChatMessageType = {
-        id: `error-${Date.now()}-${Math.random()}`,
-        sender: MessageSender.AI,
-        text: errorText,
-        timestamp: new Date().toISOString(),
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsProcessingAI(false);
-      resetSession();
-      processedTranscriptRef.current = '';
-    }
+      return updatedMessages;
+    });
   }, [addTokens, togglePlayPause, isProcessingAI, resetSession, language]);
 
   useEffect(() => {
@@ -104,6 +112,13 @@ const VoiceChatPage: React.FC = () => {
       }
       startListening();
     }
+  };
+
+  // Clear conversation function
+  const clearConversation = () => {
+    setMessages([]);
+    resetSession();
+    processedTranscriptRef.current = '';
   };
 
   const getButtonState = () => {
@@ -142,38 +157,50 @@ const VoiceChatPage: React.FC = () => {
           </h1>
           <p className="text-gray-600 text-lg">
             {language === 'hi' 
-              ? 'हिंदी या अंग्रेजी में अपने प्रश्न पूछें' 
-              : 'Ask your questions in Hindi or English'
+              ? 'हिंदी या अंग्रेजी में अपने प्रश्न पूछें - मैं पिछली बातचीत याद रखूंगा' 
+              : 'Ask your questions in Hindi or English - I\'ll remember our conversation'
             }
           </p>
           
-          {/* Language Toggle */}
-          <div className="mt-4 flex items-center justify-center space-x-4">
-            <span className="text-sm text-gray-600">
-              {language === 'hi' ? 'भाषा:' : 'Language:'}
-            </span>
-            <div className="flex bg-white rounded-full p-1 shadow-md border border-gray-200">
-              <button
-                onClick={() => setLanguage('en')}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  language === 'en'
-                    ? 'bg-blue-500 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-blue-500'
-                }`}
-              >
-                English
-              </button>
-              <button
-                onClick={() => setLanguage('hi')}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  language === 'hi'
-                    ? 'bg-blue-500 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-blue-500'
-                }`}
-              >
-                हिंदी
-              </button>
+          {/* Language Toggle and Clear Button */}
+          <div className="mt-4 flex items-center justify-center space-x-6">
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-600">
+                {language === 'hi' ? 'भाषा:' : 'Language:'}
+              </span>
+              <div className="flex bg-white rounded-full p-1 shadow-md border border-gray-200">
+                <button
+                  onClick={() => setLanguage('en')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    language === 'en'
+                      ? 'bg-blue-500 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-blue-500'
+                  }`}
+                >
+                  English
+                </button>
+                <button
+                  onClick={() => setLanguage('hi')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    language === 'hi'
+                      ? 'bg-blue-500 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-blue-500'
+                  }`}
+                >
+                  हिंदी
+                </button>
+              </div>
             </div>
+            
+            {/* Clear Conversation Button */}
+            {messages.length > 0 && (
+              <button
+                onClick={clearConversation}
+                className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-full text-sm font-medium transition-all duration-200 border border-red-200"
+              >
+                {language === 'hi' ? '🗑️ चैट साफ़ करें' : '🗑️ Clear Chat'}
+              </button>
+            )}
           </div>
           
           {transcript && (
@@ -193,8 +220,14 @@ const VoiceChatPage: React.FC = () => {
                 <div className="space-y-2">
                   <p className="text-lg font-medium text-gray-700">
                     {language === 'hi' 
-                      ? 'नमस्ते! मैं भारत मित्र हूँ। मुझसे सरकारी योजनाओं और लाभों के बारे में पूछें।'
-                      : 'Welcome! I\'m Bharat Mitra. Ask me about government schemes and benefits.'
+                      ? 'नमस्ते! मैं भारत मित्र हूँ। मुझसे सरकारी योजनाओं के बारे में पूछें।'
+                      : 'Welcome! I\'m Bharat Mitra. Ask me about government schemes.'
+                    }
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {language === 'hi' 
+                      ? 'मैं पूरी बातचीत याद रखूंगा और आपके फॉलो-अप प्रश्नों का जवाब दूंगा।'
+                      : 'I\'ll remember our entire conversation and answer your follow-up questions.'
                     }
                   </p>
                 </div>
@@ -287,8 +320,8 @@ const VoiceChatPage: React.FC = () => {
         <div className="mt-6 bg-white/50 rounded-lg p-4 text-center">
           <p className="text-gray-600">
             {language === 'hi' 
-              ? '💡 सुझाव: ऊपर दिए गए भाषा टॉगल से अपनी पसंदीदा भाषा चुनें। चैटबॉट उसी भाषा में जवाब देगा।'
-              : '💡 Tip: Use the language toggle above to select your preferred language. The chatbot will respond in the same language.'
+              ? '💡 सुझाव: मैं पूरी बातचीत याद रखता हूँ। आप फॉलो-अप प्रश्न पूछ सकते हैं जैसे "इसके लिए कैसे आवेदन करें?" या "और क्या शर्तें हैं?"'
+              : '💡 Tip: I remember our entire conversation. You can ask follow-up questions like "How do I apply for this?" or "What are the other requirements?"'
             }
           </p>
         </div>
