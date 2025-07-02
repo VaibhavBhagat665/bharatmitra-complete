@@ -6,11 +6,12 @@ import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import { UserContext } from '../contexts/UserContext';
 import { MicIcon } from '../components/icons/MicIcon';
 import ChatMessage from '../components/ChatMessage';
+import { cleanVoiceResponse, cleanTextForDisplay } from '../utils/textCleanup';
 
 const EnhancedVoiceChatPage: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
-  const { addTokens, setLanguage } = useContext(UserContext); // Added setLanguage
+  const { addTokens, setLanguage } = useContext(UserContext);
   const { 
     isListening, 
     transcript, 
@@ -51,20 +52,28 @@ const EnhancedVoiceChatPage: React.FC = () => {
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      const aiResponseText = await getSchemeAdvice(query, language);
+      const rawAiResponse = await getSchemeAdvice(query, language);
+      
+      // Clean the AI response for display and speech
+      const displayText = cleanTextForDisplay(rawAiResponse);
+      const speechText = cleanVoiceResponse(rawAiResponse, language);
+      
+      console.log('Original AI response:', rawAiResponse);
+      console.log('Cleaned for display:', displayText);
+      console.log('Cleaned for speech:', speechText);
       
       const aiMessage: ChatMessageType = {
         id: `ai-${Date.now()}-${Math.random()}`,
         sender: MessageSender.AI,
-        text: aiResponseText,
+        text: displayText, // Use cleaned text for display
         timestamp: new Date().toISOString(),
       };
       
       setMessages(prev => [...prev, aiMessage]);
       
-      // Auto-play the AI response with the correct detected language
+      // Auto-play the AI response with cleaned speech text
       setTimeout(() => {
-        togglePlayPause(aiResponseText, aiMessage.id, language);
+        togglePlayPause(speechText, aiMessage.id, language);
       }, 300);
       
       addTokens(10);
@@ -88,7 +97,7 @@ const EnhancedVoiceChatPage: React.FC = () => {
       resetSession();
       processedTranscriptRef.current = '';
     }
-  }, [addTokens, togglePlayPause, isProcessingAI, resetSession]);
+  }, [addTokens, togglePlayPause, isProcessingAI, resetSession, setLanguage]);
 
   useEffect(() => {
     if (isComplete && transcript.trim() && !isProcessingAI) {
