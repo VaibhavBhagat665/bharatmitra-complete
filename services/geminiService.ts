@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
+import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { ChatMessage as ChatMessageType, MessageSender } from '../types';
 
 const API_KEY = process.env.API_KEY;
