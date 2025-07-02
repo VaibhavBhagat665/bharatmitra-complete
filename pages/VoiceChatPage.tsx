@@ -10,7 +10,7 @@ import ChatMessage from '../components/ChatMessage';
 const EnhancedVoiceChatPage: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
-  const { addTokens } = useContext(UserContext);
+  const { addTokens, setLanguage } = useContext(UserContext); // Added setLanguage
   const { 
     isListening, 
     transcript, 
@@ -25,6 +25,14 @@ const EnhancedVoiceChatPage: React.FC = () => {
   const { isPlaying, togglePlayPause } = useTextToSpeech();
   const chatEndRef = useRef<HTMLDivElement>(null);
   const processedTranscriptRef = useRef<string>('');
+
+  // Update context language when speech language is detected
+  useEffect(() => {
+    if (detectedLanguage) {
+      setLanguage(detectedLanguage);
+      console.log('Updated context language to:', detectedLanguage);
+    }
+  }, [detectedLanguage, setLanguage]);
 
   const handleAiResponse = useCallback(async (query: string, language: 'en' | 'hi') => {
     if (!query.trim() || isProcessingAI || query === processedTranscriptRef.current) return;
@@ -54,7 +62,7 @@ const EnhancedVoiceChatPage: React.FC = () => {
       
       setMessages(prev => [...prev, aiMessage]);
       
-      // Auto-play the AI response
+      // Auto-play the AI response with the correct detected language
       setTimeout(() => {
         togglePlayPause(aiResponseText, aiMessage.id, language);
       }, 300);
@@ -84,7 +92,7 @@ const EnhancedVoiceChatPage: React.FC = () => {
 
   useEffect(() => {
     if (isComplete && transcript.trim() && !isProcessingAI) {
-      console.log('Speech complete, processing:', transcript);
+      console.log('Speech complete, processing:', transcript, 'Language:', detectedLanguage);
       handleAiResponse(transcript, detectedLanguage);
     }
   }, [isComplete, transcript, detectedLanguage, handleAiResponse, isProcessingAI]);
