@@ -1,4 +1,5 @@
 import React, { useState, useContext } from 'react';
+import Confetti from 'react-confetti';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
 import { UserContext } from '../contexts/UserContext';
 import PerkCard from '../components/PerkCard';
@@ -47,6 +48,7 @@ const RedeemPage: React.FC = () => {
   const { tokenBalance, deductTokens } = useContext(UserContext);
   const [selectedCategory, setSelectedCategory] = useState<'All' | Perk['category']>('All');
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error'; } | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const filtered = selectedCategory === 'All'
     ? ALL_PERKS
@@ -56,6 +58,8 @@ const RedeemPage: React.FC = () => {
     if (deductTokens(price)) {
       const redeemedPerk = ALL_PERKS.find((p) => p.id === id);
       setNotification({ message: `🎉 Redeemed "${redeemedPerk?.name}"!`, type: 'success' });
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 2000);
     } else {
       setNotification({ message: `❌ Not enough tokens.`, type: 'error' });
     }
@@ -64,6 +68,7 @@ const RedeemPage: React.FC = () => {
 
   return (
     <div className="min-h-screen px-6 py-12" style={{ backgroundColor: '#fff6f7' }}>
+      {showConfetti && <Confetti />}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-red-700">Redeem Your Tokens</h1>
         <p className="text-gray-700 mt-2">Balance: <strong>{tokenBalance}</strong> tokens</p>
