@@ -70,7 +70,7 @@ export const getSchemeAdvice = async (
   try {
     // Use the correct stable model name
     const model: GenerativeModel = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash",  // Updated to stable version
+      model: "gemini-2.5-flash-preview-04-17",  // Updated to stable version
       systemInstruction: getSystemInstruction(lang)
     });
     
