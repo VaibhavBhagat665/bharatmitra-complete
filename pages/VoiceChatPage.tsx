@@ -76,7 +76,7 @@ const EnhancedVoiceChatPage: React.FC = () => {
         togglePlayPause(speechText, aiMessage.id, language);
       }, 300);
       
-      addTokens(10);
+     
     } catch (error) {
       console.error('Error fetching AI response:', error);
       
