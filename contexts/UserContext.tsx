@@ -11,6 +11,7 @@ interface UserContextType {
   loading: boolean;
   authError: string | null;
   logout: () => Promise<void>;
+  addTokens: (amount: number) => Promise<void>; // Added this missing function
   rewardTokens: (amount: number, reason: string) => Promise<void>;
   redeemPerk: (perkId: string, price: number) => Promise<boolean>;
   addSchemeToHistory: (schemeId: string, schemeName: string) => Promise<void>;
@@ -33,6 +34,7 @@ export const UserContext = createContext<UserContextType>({
   loading: true,
   authError: null,
   logout: async () => {},
+  addTokens: async () => {}, // Added default implementation
   rewardTokens: async () => {},
   redeemPerk: async () => false,
   addSchemeToHistory: async () => {},
@@ -252,6 +254,11 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   };
 
+  // Simple addTokens function (wrapper around rewardTokens)
+  const addTokens = async (amount: number) => {
+    await rewardTokens(amount, 'Voice chat interaction');
+  };
+
   const rewardTokens = async (amount: number, reason: string) => {
     if (!user || !userData) {
       throw new Error('User not authenticated');
@@ -343,6 +350,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     logout,
     updateUserProfile,
     addSchemeToHistory,
+    addTokens, // Added this to the return value
     rewardTokens,
     redeemPerk,
     refreshUserData,
