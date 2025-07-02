@@ -4,6 +4,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import ChatPage from './pages/ChatPage';
+import VoiceChatPage from './pages/VoiceChatPage';
 import BenefitsPage from './pages/BenefitsPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import ScholarshipPage from './pages/ScholarshipPage';
@@ -26,6 +27,7 @@ const App: React.FC = () => {
 
             {/* Protected Routes */}
             <Route path="/chat" element={<AuthGuard><ChatPage /></AuthGuard>} />
+            <Route path="/voice-chat" element={<AuthGuard><VoiceChatPage /></AuthGuard>} />
             <Route path="/benefits" element={<AuthGuard><BenefitsPage /></AuthGuard>} />
             <Route path="/scholarships" element={<AuthGuard><ScholarshipPage /></AuthGuard>} />
             <Route path="/redeem" element={<AuthGuard><RedeemPage /></AuthGuard>} />
