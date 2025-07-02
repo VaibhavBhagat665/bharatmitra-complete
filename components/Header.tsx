@@ -41,6 +41,7 @@ const Header: React.FC = () => {
           <nav className="hidden md:flex items-center space-x-1">
             <NavLink to="/" className={({ isActive }) => `${linkStyle} ${isActive ? activeLinkStyle : ''}`}>Home</NavLink>
             <NavLink to="/chat" className={({ isActive }) => `${linkStyle} ${isActive ? activeLinkStyle : ''}`}>Chat</NavLink>
+            <NavLink to="/voice-chat" className={({ isActive }) => `${linkStyle} ${isActive ? activeLinkStyle : ''}`}>Voice Chat</NavLink>
             <NavLink to="/benefits" className={({ isActive }) => `${linkStyle} ${isActive ? activeLinkStyle : ''}`}>Benefits</NavLink>
             <NavLink to="/scholarships" className={({ isActive }) => `${linkStyle} ${isActive ? activeLinkStyle : ''}`}>Scholarships</NavLink>
             <NavLink to="/leaderboard" className={({ isActive }) => `${linkStyle} ${isActive ? activeLinkStyle : ''}`}>Leaderboard</NavLink>
