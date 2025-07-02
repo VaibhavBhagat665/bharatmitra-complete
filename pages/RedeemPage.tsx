@@ -55,16 +55,23 @@ const RedeemPage: React.FC = () => {
     : ALL_PERKS.filter((perk) => perk.category === selectedCategory);
 
   const handleRedeem = (id: string, price: number) => {
-    if (deductTokens(price)) {
-      const redeemedPerk = ALL_PERKS.find((p) => p.id === id);
-      setNotification({ message: `🎉 Redeemed "${redeemedPerk?.name}"!`, type: 'success' });
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 2000);
-    } else {
-      setNotification({ message: `❌ Not enough tokens.`, type: 'error' });
-    }
-    setTimeout(() => setNotification(null), 3000);
-  };
+  console.log('Current token balance:', tokenBalance);
+  console.log('Attempting to redeem for price:', price);
+  console.log('Can afford?', tokenBalance >= price);
+  
+  const deductResult = deductTokens(price);
+  console.log('deductTokens returned:', deductResult);
+  
+  if (deductResult) {
+    const redeemedPerk = ALL_PERKS.find((p) => p.id === id);
+    setNotification({ message: `🎉 Redeemed "${redeemedPerk?.name}"!`, type: 'success' });
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 2000);
+  } else {
+    setNotification({ message: `❌ Not enough tokens.`, type: 'error' });
+  }
+  setTimeout(() => setNotification(null), 3000);
+};
 
   return (
     <div className="min-h-screen px-6 py-12" style={{ backgroundColor: '#fff6f7' }}>
