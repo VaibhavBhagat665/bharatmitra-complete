@@ -60,7 +60,9 @@ export const getSchemeAdvice = async (query: string, lang: 'en' | 'hi'): Promise
         }
     });
     
-    return response.text;
+    const cleanedResponse = cleanMarkdownFromResponse(response.text);
+    
+    return cleanedResponse;
   } catch (error) {
     console.error("Error calling Gemini API:", error);
     return "I'm sorry, I'm having trouble connecting to my knowledge base right now. Please try again in a moment.";
@@ -91,18 +93,4 @@ const cleanMarkdownFromResponse = (text) => {
     .trim();
 };
 
-// Update your getSchemeAdvice function to use this cleaning
-export const getSchemeAdvice = async (query, language = 'en') => {
-  try {
-    // Your existing API call logic here...
-    const response = await /* your API call */;
-    
-    // Clean the response text before returning
-    const cleanedResponse = cleanMarkdownFromResponse(response.text);
-    
-    return cleanedResponse;
-  } catch (error) {
-    console.error('Error getting scheme advice:', error);
-    throw error;
-  }
-};
+
