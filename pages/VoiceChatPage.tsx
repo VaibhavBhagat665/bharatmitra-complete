@@ -6,16 +6,14 @@ import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import { UserContext } from '../contexts/UserContext';
 import { MicIcon } from '../components/icons/MicIcon';
 import ChatMessage from '../components/ChatMessage';
-import { cleanVoiceResponse, cleanTextForDisplay } from '../utils/textCleanup';
 
-const EnhancedVoiceChatPage: React.FC = () => {
+const VoiceChatPage: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
-  const { addTokens, setLanguage } = useContext(UserContext);
+  const { addTokens, language, setLanguage } = useContext(UserContext); // Use language from context
   const { 
     isListening, 
     transcript, 
-    detectedLanguage,
     error: recognitionError,
     isComplete,
     startListening,
@@ -27,15 +25,7 @@ const EnhancedVoiceChatPage: React.FC = () => {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const processedTranscriptRef = useRef<string>('');
 
-  // Update context language when speech language is detected
-  useEffect(() => {
-    if (detectedLanguage) {
-      setLanguage(detectedLanguage);
-      console.log('Updated context language to:', detectedLanguage);
-    }
-  }, [detectedLanguage, setLanguage]);
-
-  const handleAiResponse = useCallback(async (query: string, language: 'en' | 'hi') => {
+  const handleAiResponse = useCallback(async (query: string) => {
     if (!query.trim() || isProcessingAI || query === processedTranscriptRef.current) return;
     
     console.log('Processing AI response for:', query, 'in language:', language);
@@ -52,31 +42,24 @@ const EnhancedVoiceChatPage: React.FC = () => {
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      const rawAiResponse = await getSchemeAdvice(query, language);
-      
-      // Clean the AI response for display and speech
-      const displayText = cleanTextForDisplay(rawAiResponse);
-      const speechText = cleanVoiceResponse(rawAiResponse, language);
-      
-      console.log('Original AI response:', rawAiResponse);
-      console.log('Cleaned for display:', displayText);
-      console.log('Cleaned for speech:', speechText);
+      // Use the context language instead of detected language
+      const aiResponseText = await getSchemeAdvice(query, language);
       
       const aiMessage: ChatMessageType = {
         id: `ai-${Date.now()}-${Math.random()}`,
         sender: MessageSender.AI,
-        text: displayText, // Use cleaned text for display
+        text: aiResponseText,
         timestamp: new Date().toISOString(),
       };
       
       setMessages(prev => [...prev, aiMessage]);
       
-      // Auto-play the AI response with cleaned speech text
+      // Auto-play the AI response with the selected language from context
       setTimeout(() => {
-        togglePlayPause(speechText, aiMessage.id, language);
+        togglePlayPause(aiResponseText, aiMessage.id, language);
       }, 300);
       
-     
+      addTokens(10);
     } catch (error) {
       console.error('Error fetching AI response:', error);
       
@@ -97,14 +80,14 @@ const EnhancedVoiceChatPage: React.FC = () => {
       resetSession();
       processedTranscriptRef.current = '';
     }
-  }, [addTokens, togglePlayPause, isProcessingAI, resetSession, setLanguage]);
+  }, [addTokens, togglePlayPause, isProcessingAI, resetSession, language]);
 
   useEffect(() => {
     if (isComplete && transcript.trim() && !isProcessingAI) {
-      console.log('Speech complete, processing:', transcript, 'Language:', detectedLanguage);
-      handleAiResponse(transcript, detectedLanguage);
+      console.log('Speech complete, processing:', transcript, 'Using context language:', language);
+      handleAiResponse(transcript);
     }
-  }, [isComplete, transcript, detectedLanguage, handleAiResponse, isProcessingAI]);
+  }, [isComplete, transcript, handleAiResponse, isProcessingAI, language]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -126,7 +109,7 @@ const EnhancedVoiceChatPage: React.FC = () => {
   const getButtonState = () => {
     if (isProcessingAI) {
       return { 
-        text: "Processing...", 
+        text: language === 'hi' ? "प्रोसेसिंग..." : "Processing...", 
         color: "bg-yellow-500 animate-pulse", 
         disabled: true 
       };
@@ -134,14 +117,14 @@ const EnhancedVoiceChatPage: React.FC = () => {
     
     if (isListening) {
       return { 
-        text: "Listening... Tap to Stop", 
+        text: language === 'hi' ? "सुन रहा हूँ... बंद करने के लिए टैप करें" : "Listening... Tap to Stop", 
         color: "bg-red-500 animate-pulse", 
         disabled: false 
       };
     }
     
     return { 
-      text: "Tap to Speak", 
+      text: language === 'hi' ? "बोलने के लिए टैप करें" : "Tap to Speak", 
       color: "bg-green-600 hover:bg-green-700", 
       disabled: false 
     };
@@ -155,15 +138,47 @@ const EnhancedVoiceChatPage: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-green-600 bg-clip-text text-transparent mb-2">
-            🎙️ Bharat Mitra Voice Chat
+            🎙️ {language === 'hi' ? 'भारत मित्र वॉयस चैट' : 'Bharat Mitra Voice Chat'}
           </h1>
           <p className="text-gray-600 text-lg">
-            Ask your questions in Hindi or English
+            {language === 'hi' 
+              ? 'हिंदी या अंग्रेजी में अपने प्रश्न पूछें' 
+              : 'Ask your questions in Hindi or English'
+            }
           </p>
           
-          {detectedLanguage && transcript && (
+          {/* Language Toggle */}
+          <div className="mt-4 flex items-center justify-center space-x-4">
+            <span className="text-sm text-gray-600">
+              {language === 'hi' ? 'भाषा:' : 'Language:'}
+            </span>
+            <div className="flex bg-white rounded-full p-1 shadow-md border border-gray-200">
+              <button
+                onClick={() => setLanguage('en')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  language === 'en'
+                    ? 'bg-blue-500 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-blue-500'
+                }`}
+              >
+                English
+              </button>
+              <button
+                onClick={() => setLanguage('hi')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  language === 'hi'
+                    ? 'bg-blue-500 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-blue-500'
+                }`}
+              >
+                हिंदी
+              </button>
+            </div>
+          </div>
+          
+          {transcript && (
             <div className="mt-3 inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
-              🗣️ Detected: {detectedLanguage === 'hi' ? 'Hindi' : 'English'}
+              🗣️ {language === 'hi' ? 'सुना गया:' : 'Heard:'} {language === 'hi' ? 'हिंदी' : 'English'}
             </div>
           )}
         </div>
@@ -177,17 +192,20 @@ const EnhancedVoiceChatPage: React.FC = () => {
                 <div className="text-6xl animate-bounce">🤖</div>
                 <div className="space-y-2">
                   <p className="text-lg font-medium text-gray-700">
-                    Welcome! I'm Bharat Mitra. Ask me about government schemes and benefits.
+                    {language === 'hi' 
+                      ? 'नमस्ते! मैं भारत मित्र हूँ। मुझसे सरकारी योजनाओं और लाभों के बारे में पूछें।'
+                      : 'Welcome! I\'m Bharat Mitra. Ask me about government schemes and benefits.'
+                    }
                   </p>
                 </div>
                 <div className="flex items-center space-x-6 text-sm text-gray-500">
                   <span className="flex items-center">
                     <span className="w-3 h-3 bg-orange-400 rounded-full mr-2"></span>
-                    Hindi Supported
+                    {language === 'hi' ? 'हिंदी समर्थित' : 'Hindi Supported'}
                   </span>
                   <span className="flex items-center">
                     <span className="w-3 h-3 bg-green-400 rounded-full mr-2"></span>
-                    English Supported
+                    {language === 'hi' ? 'अंग्रेजी समर्थित' : 'English Supported'}
                   </span>
                 </div>
               </div>
@@ -220,9 +238,9 @@ const EnhancedVoiceChatPage: React.FC = () => {
                   <div className="text-blue-400 text-xl">🎯</div>
                   <div className="flex-1">
                     <p className="text-blue-800 text-sm font-medium mb-1">
-                      Your Message:
+                      {language === 'hi' ? 'आपका संदेश:' : 'Your Message:'}
                       <span className="ml-2 text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">
-                        {detectedLanguage === 'hi' ? 'Hindi' : 'English'}
+                        {language === 'hi' ? 'हिंदी' : 'English'}
                       </span>
                     </p>
                     <p className="text-blue-900 text-lg leading-relaxed">{transcript}</p>
@@ -257,7 +275,7 @@ const EnhancedVoiceChatPage: React.FC = () => {
                 </p>
                 {isListening && (
                   <p className="text-sm text-gray-500 mt-2 animate-pulse">
-                    🔊 Speak clearly
+                    {language === 'hi' ? '🔊 स्पष्ट रूप से बोलें' : '🔊 Speak clearly'}
                   </p>
                 )}
               </div>
@@ -268,7 +286,10 @@ const EnhancedVoiceChatPage: React.FC = () => {
         {/* Tips Section */}
         <div className="mt-6 bg-white/50 rounded-lg p-4 text-center">
           <p className="text-gray-600">
-            💡 Tip: Speak naturally in either Hindi or English. The system will automatically detect your language.
+            {language === 'hi' 
+              ? '💡 सुझाव: ऊपर दिए गए भाषा टॉगल से अपनी पसंदीदा भाषा चुनें। चैटबॉट उसी भाषा में जवाब देगा।'
+              : '💡 Tip: Use the language toggle above to select your preferred language. The chatbot will respond in the same language.'
+            }
           </p>
         </div>
       </div>
@@ -276,4 +297,4 @@ const EnhancedVoiceChatPage: React.FC = () => {
   );
 };
 
-export default EnhancedVoiceChatPage;
+export default VoiceChatPage;
