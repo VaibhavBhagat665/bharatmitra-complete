@@ -66,3 +66,43 @@ export const getSchemeAdvice = async (query: string, lang: 'en' | 'hi'): Promise
     return "I'm sorry, I'm having trouble connecting to my knowledge base right now. Please try again in a moment.";
   }
 };
+
+const cleanMarkdownFromResponse = (text) => {
+  if (!text) return text;
+  
+  return text
+    // Remove bold formatting (**text** or __text__)
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    // Remove italic formatting (*text* or _text_)
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/_(.*?)_/g, '$1')
+    // Remove strikethrough (~~text~~)
+    .replace(/~~(.*?)~~/g, '$1')
+    // Remove inline code (`text`)
+    .replace(/`(.*?)`/g, '$1')
+    // Remove headers (# ## ### etc.)
+    .replace(/^#{1,6}\s+/gm, '')
+    // Remove list markers (- * + 1. 2. etc.)
+    .replace(/^[\s]*[-\*\+]\s+/gm, '')
+    .replace(/^[\s]*\d+\.\s+/gm, '')
+    // Remove extra whitespace and clean up
+    .replace(/\n\s*\n/g, '\n')
+    .trim();
+};
+
+// Update your getSchemeAdvice function to use this cleaning
+export const getSchemeAdvice = async (query, language = 'en') => {
+  try {
+    // Your existing API call logic here...
+    const response = await /* your API call */;
+    
+    // Clean the response text before returning
+    const cleanedResponse = cleanMarkdownFromResponse(response.text);
+    
+    return cleanedResponse;
+  } catch (error) {
+    console.error('Error getting scheme advice:', error);
+    throw error;
+  }
+};
