@@ -45,40 +45,93 @@ const ALL_PERKS: Perk[] = [
 const CATEGORIES: (Perk['category'] | 'All')[] = ['All', 'Premium', 'Mentorship', 'Exam', 'Daily', 'Mystery'];
 
 const RedeemPage: React.FC = () => {
-  const { tokenBalance, deductTokens } = useContext(UserContext);
+  const { tokenBalance, redeemPerk, user, userData } = useContext(UserContext);
   const [selectedCategory, setSelectedCategory] = useState<'All' | Perk['category']>('All');
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error'; } | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [redeeming, setRedeeming] = useState<string | null>(null);
 
   const filtered = selectedCategory === 'All'
     ? ALL_PERKS
     : ALL_PERKS.filter((perk) => perk.category === selectedCategory);
 
-  const handleRedeem = (id: string, price: number) => {
-  console.log('Current token balance:', tokenBalance);
-  console.log('Attempting to redeem for price:', price);
-  console.log('Can afford?', tokenBalance >= price);
-  
-  const deductResult = deductTokens(price);
-  console.log('deductTokens returned:', deductResult);
-  
-  if (deductResult) {
-    const redeemedPerk = ALL_PERKS.find((p) => p.id === id);
-    setNotification({ message: `🎉 Redeemed "${redeemedPerk?.name}"!`, type: 'success' });
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 2000);
-  } else {
-    setNotification({ message: `❌ Not enough tokens.`, type: 'error' });
+  const handleRedeem = async (id: string, price: number) => {
+    console.log('=== REDEEM ATTEMPT ===');
+    console.log('Perk ID:', id);
+    console.log('Price:', price);
+    console.log('Current token balance:', tokenBalance);
+    console.log('User authenticated:', !!user);
+    console.log('User data available:', !!userData);
+
+    if (!user || !userData) {
+      setNotification({ message: '❌ Please log in to redeem perks.', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+
+    if (tokenBalance < price) {
+      console.log('Insufficient tokens:', { need: price, have: tokenBalance });
+      setNotification({ message: `❌ Not enough tokens. You need ${price} but have ${tokenBalance}.`, type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+
+    try {
+      setRedeeming(id);
+      console.log('Calling redeemPerk function...');
+      
+      const success = await redeemPerk(id, price);
+      console.log('redeemPerk result:', success);
+      
+      if (success) {
+        const redeemedPerk = ALL_PERKS.find((p) => p.id === id);
+        setNotification({ 
+          message: `🎉 Redeemed "${redeemedPerk?.name}"! ${price} tokens deducted.`, 
+          type: 'success' 
+        });
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 2000);
+        console.log('Redemption successful!');
+      } else {
+        setNotification({ message: `❌ Redemption failed. Please try again.`, type: 'error' });
+        console.log('Redemption failed - redeemPerk returned false');
+      }
+    } catch (error) {
+      console.error('Redemption error:', error);
+      setNotification({ message: `❌ An error occurred: ${error}`, type: 'error' });
+    } finally {
+      setRedeeming(null);
+      setTimeout(() => setNotification(null), 4000);
+    }
+  };
+
+  // Show login prompt if not authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen px-6 py-12 flex items-center justify-center" style={{ backgroundColor: '#fff6f7' }}>
+        <div className="text-center max-w-md">
+          <h1 className="text-3xl font-bold text-red-700 mb-4">Login Required</h1>
+          <p className="text-gray-700 mb-6">
+            Please log in to view your token balance and redeem perks.
+          </p>
+        </div>
+      </div>
+    );
   }
-  setTimeout(() => setNotification(null), 3000);
-};
 
   return (
     <div className="min-h-screen px-6 py-12" style={{ backgroundColor: '#fff6f7' }}>
       {showConfetti && <Confetti />}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-red-700">Redeem Your Tokens</h1>
-        <p className="text-gray-700 mt-2">Balance: <strong>{tokenBalance}</strong> tokens</p>
+        <p className="text-gray-700 mt-2">
+          Balance: <strong>{tokenBalance}</strong> tokens
+        </p>
+        {userData && (
+          <p className="text-sm text-gray-500">
+            Welcome, {userData.username || userData.email}
+          </p>
+        )}
       </div>
 
       {notification && (
@@ -119,6 +172,7 @@ const RedeemPage: React.FC = () => {
               perk={perk}
               userTokens={tokenBalance}
               onRedeem={handleRedeem}
+              isRedeeming={redeeming === perk.id}
             />
           ))
         )}
