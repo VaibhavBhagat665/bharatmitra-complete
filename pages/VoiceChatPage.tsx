@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import { ChatMessage as ChatMessageType, MessageSender } from '../types';
 import { getSchemeAdvice } from '../services/geminiService';
-import { useEnhancedSpeechRecognition } from '../hooks/useEnhancedSpeechRecognition';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import { UserContext } from '../contexts/UserContext';
 import { MicIcon } from '../components/icons/MicIcon';
@@ -20,7 +20,7 @@ const VoiceChatPage: React.FC = () => {
     startListening,
     stopListening,
     resetSession
-  } = useEnhancedSpeechRecognition();
+  } = useSpeechRecognition();
   
   const { isPlaying, activeMessageId, togglePlayPause } = useTextToSpeech();
   const chatEndRef = useRef<HTMLDivElement>(null);
