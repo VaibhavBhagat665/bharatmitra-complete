@@ -3,6 +3,7 @@ import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
 import { UserContext } from '../contexts/UserContext';
 import PerkCard from '../components/PerkCard';
 
+// Define your Perk type inline (or import if defined elsewhere)
 type Perk = {
   id: string;
   name: string;
@@ -12,23 +13,29 @@ type Perk = {
   category: 'Premium' | 'Mentorship' | 'Exam' | 'Daily' | 'Mystery';
 };
 
+// Create 15+ perks
 const ALL_PERKS: Perk[] = [
+  // Premium
   { id: 'premium-1', name: 'Premium Scheme Access', description: 'Unlock detailed guides & calculators.', price: 60, icon: () => <>🏆</>, category: 'Premium' },
   { id: 'premium-2', name: 'Exclusive Webinar', description: 'Attend govt strategy sessions.', price: 50, icon: () => <>🎤</>, category: 'Premium' },
   { id: 'premium-3', name: 'Monthly Masterclass', description: 'Webinar with expert panel.', price: 70, icon: () => <>🎓</>, category: 'Premium' },
 
+  // Mentorship
   { id: 'mentorship-1', name: '1-on-1 Mentor Call', description: 'Talk to a verified expert.', price: 40, icon: () => <>📞</>, category: 'Mentorship' },
   { id: 'mentorship-2', name: 'Resume Review', description: 'Get resume feedback.', price: 30, icon: () => <>📝</>, category: 'Mentorship' },
   { id: 'mentorship-3', name: 'Mock Interview', description: 'Practice for govt job interview.', price: 35, icon: () => <>🎯</>, category: 'Mentorship' },
 
+  // Exam
   { id: 'exam-1', name: 'Exam Prep Kit', description: 'Practice materials & tips.', price: 25, icon: () => <>📚</>, category: 'Exam' },
   { id: 'exam-2', name: 'Current Affairs Digest', description: 'Monthly e-mag for competitive exams.', price: 15, icon: () => <>📰</>, category: 'Exam' },
   { id: 'exam-3', name: 'Solved PYQs', description: 'Past paper solutions.', price: 20, icon: () => <>📄</>, category: 'Exam' },
 
+  // Daily
   { id: 'daily-1', name: 'Daily Scheme Tip', description: 'Quick daily scheme tips.', price: 5, icon: () => <>📅</>, category: 'Daily' },
   { id: 'daily-2', name: 'Token Booster (Video)', description: 'Watch a 30s video for 10 tokens.', price: 0, icon: () => <>🎥</>, category: 'Daily' },
   { id: 'daily-3', name: 'Badge of Supporter', description: 'Special badge for engagement.', price: 5, icon: () => <>🏅</>, category: 'Daily' },
 
+  // Mystery
   { id: 'mystery-1', name: '🎁 Mystery Box', description: 'Unlock a surprise reward!', price: 10, icon: () => <>🎁</>, category: 'Mystery' },
   { id: 'mystery-2', name: 'Secret Scheme Reveal', description: 'Unlock hidden high-benefit scheme.', price: 15, icon: () => <>🔍</>, category: 'Mystery' },
   { id: 'mystery-3', name: 'Lucky Spin', description: 'Try your luck for tokens or perks.', price: 20, icon: () => <>🎡</>, category: 'Mystery' },
@@ -40,7 +47,6 @@ const RedeemPage: React.FC = () => {
   const { tokenBalance, deductTokens } = useContext(UserContext);
   const [selectedCategory, setSelectedCategory] = useState<'All' | Perk['category']>('All');
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error'; } | null>(null);
-  const [showCelebration, setShowCelebration] = useState(false);
 
   const filtered = selectedCategory === 'All'
     ? ALL_PERKS
@@ -50,8 +56,6 @@ const RedeemPage: React.FC = () => {
     if (deductTokens(price)) {
       const redeemedPerk = ALL_PERKS.find((p) => p.id === id);
       setNotification({ message: `🎉 Redeemed "${redeemedPerk?.name}"!`, type: 'success' });
-      setShowCelebration(true);
-      setTimeout(() => setShowCelebration(false), 2000);
     } else {
       setNotification({ message: `❌ Not enough tokens.`, type: 'error' });
     }
@@ -59,23 +63,7 @@ const RedeemPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen px-6 py-12 relative" style={{ backgroundColor: '#fff6f7' }}>
-      {showCelebration && (
-        <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
-          <div className="text-6xl animate-bounce">🎉</div>
-          <style jsx>{`
-            @keyframes celebrate {
-              0% { transform: scale(0) rotate(0deg); opacity: 0; }
-              50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
-              100% { transform: scale(1) rotate(360deg); opacity: 0; }
-            }
-            .celebration {
-              animation: celebrate 2s ease-in-out;
-            }
-          `}</style>
-        </div>
-      )}
-
+    <div className="min-h-screen px-6 py-12" style={{ backgroundColor: '#fff6f7' }}>
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-red-700">Redeem Your Tokens</h1>
         <p className="text-gray-700 mt-2">Balance: <strong>{tokenBalance}</strong> tokens</p>
