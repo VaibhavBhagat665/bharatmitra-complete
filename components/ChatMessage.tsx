@@ -1,11 +1,10 @@
-
 import React, { useContext } from 'react';
 import { ChatMessage as ChatMessageType, MessageSender } from '../types';
 import { BotIcon } from './icons/BotIcon';
 import { UserIcon } from './icons/UserIcon';
+// import { PlayIcon } from './icons/PlayIcon';
+// import { PauseIcon } from './icons/PauseIcon';
 import { UserContext } from '../contexts/UserContext';
-import { PauseIcon } from './icons/PauseIcon';
-import { VolumeUpIcon } from './icons/VolumeUpIcon';
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -39,13 +38,31 @@ const LinkifiedText: React.FC<{ text: string }> = ({ text }) => {
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   const isAI = message.sender === MessageSender.AI;
-  const { language, ttsIsPlaying, ttsActiveMessageId, togglePlayPause } = useContext(UserContext);
+  const { 
+    language,
+    togglePlayPause, 
+    isSpeaking, 
+    isPaused, 
+    activeUtteranceId 
+  } = useContext(UserContext);
 
-  const handlePlayAudio = () => {
-    togglePlayPause(message.text, message.id, language);
+  const isThisMessageActive = activeUtteranceId === message.id;
+  
+  const detectLanguage = (text: string): 'en' | 'hi' => {
+    const hindiPattern = /[\u0900-\u097F]/;
+    const hindiCharCount = (text.match(/[\u0900-\u097F]/g) || []).length;
+    const totalChars = text.replace(/\s/g, '').length;
+    
+    return hindiCharCount / totalChars > 0.2 ? 'hi' : 'en';
   };
 
-  const isThisMessagePlaying = ttsActiveMessageId === message.id && ttsIsPlaying;
+  const handleSpeakClick = () => {
+    const messageLanguage = detectLanguage(message.text);
+    
+    const voiceLanguage = isAI ? messageLanguage : language;
+    
+    togglePlayPause(message.text, message.id, voiceLanguage);
+  };
 
   return (
     <div className={`flex items-start gap-3 ${isAI ? '' : 'flex-row-reverse'}`}>
@@ -54,19 +71,19 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       </div>
       <div className={`relative px-4 py-3 rounded-xl max-w-lg ${isAI ? 'bg-bharat-blue-50 border border-bharat-blue-100' : 'bg-bharat-green-100 border border-bharat-green-200'}`}>
         <LinkifiedText text={message.text} />
-        {isAI && (
-            <button 
-                onClick={handlePlayAudio}
-                className="absolute -bottom-3 -right-3 p-1.5 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-transform transform hover:scale-110"
-                aria-label={isThisMessagePlaying ? 'Pause audio' : 'Play audio'}
-            >
-                {isThisMessagePlaying ? (
-                <PauseIcon className="w-4 h-4 text-bharat-blue-700" />
-                ) : (
-                <VolumeUpIcon className="w-4 h-4 text-bharat-blue-700" />
-                )}
-            </button>
-        )}
+{/*         {isAI && (
+           // <button 
+           //    onClick={handleSpeakClick} 
+           //    className="absolute -bottom-3 -right-3 p-1 bg-white rounded-full shadow-md text-gray-500 hover:text-bharat-blue-600 hover:bg-gray-50 transition-all duration-200 hover:scale-110"
+           //    aria-label="Speak this message"
+           //    title={isThisMessageActive && isSpeaking && !isPaused ? "Pause speech" : "Play speech"}
+           //  >
+           //    {isThisMessageActive && isSpeaking && !isPaused 
+           //      ? <PauseIcon className="w-4 h-4 text-bharat-blue-700" /> 
+           //      : <PlayIcon className="w-4 h-4" />
+           //    }
+           // </button>
+        // )} */}
       </div>
     </div>
   );
