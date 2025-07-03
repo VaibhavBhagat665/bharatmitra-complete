@@ -11,43 +11,24 @@ export const AshokaChakraIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props)
     strokeLinejoin="round"
     {...props}
   >
-    {/* Outer circle */}
-    <circle cx="12" cy="12" r="10" />
+    {/* Modern hexagonal tech pattern */}
+    <path d="M12 2 L18 6 L18 12 L12 16 L6 12 L6 6 Z" />
+    <path d="M12 6 L16 8 L16 12 L12 14 L8 12 L8 8 Z" />
+    <circle cx="12" cy="10" r="1.5" />
     
-    {/* Inner hub */}
-    <circle cx="12" cy="12" r="3" />
+    {/* Geometric connection lines */}
+    <path d="M12 2 L12 6" />
+    <path d="M18 6 L16 8" />
+    <path d="M18 12 L16 12" />
+    <path d="M12 16 L12 14" />
+    <path d="M6 12 L8 12" />
+    <path d="M6 6 L8 8" />
     
-    {/* Primary spokes (8 main directions) */}
-    <g>
-      <path d="M12 2v4" />
-      <path d="M12 18v4" />
-      <path d="M22 12h-4" />
-      <path d="M6 12H2" />
-      <path d="m19.07 4.93-2.83 2.83" />
-      <path d="m7.76 16.24-2.83 2.83" />
-      <path d="m19.07 19.07-2.83-2.83" />
-      <path d="m7.76 7.76-2.83-2.83" />
-    </g>
-    
-    {/* Secondary spokes (offset by 22.5 degrees) */}
-    <g transform="rotate(22.5 12 12)">
-      <path d="M12 4v3" />
-      <path d="M12 17v3" />
-      <path d="M20 12h-3" />
-      <path d="M7 12H4" />
-      <path d="m17.66 6.34-2.12 2.12" />
-      <path d="m8.46 15.54-2.12 2.12" />
-      <path d="m17.66 17.66-2.12-2.12" />
-      <path d="m8.46 8.46-2.12-2.12" />
-    </g>
-    
-    {/* Decorative inner pattern */}
-    <g>
-      <circle cx="12" cy="8" r="0.5" />
-      <circle cx="12" cy="16" r="0.5" />
-      <circle cx="16" cy="12" r="0.5" />
-      <circle cx="8" cy="12" r="0.5" />
-    </g>
+    {/* Corner accents */}
+    <path d="M3 3 L5 3 L5 5" />
+    <path d="M19 3 L21 3 L21 5" />
+    <path d="M3 21 L5 21 L5 19" />
+    <path d="M19 21 L21 21 L21 19" />
   </svg>
 );
 
