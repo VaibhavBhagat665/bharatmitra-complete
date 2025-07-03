@@ -120,13 +120,14 @@ const Header: React.FC = () => {
                       {userData.bharat_tokens || 0}
                     </span>
                   </div>
-                  <div className="relative" ref={menuRef}>
+                  {/* Desktop Account Menu - Hidden on mobile */}
+                  <div className="relative hidden md:block" ref={menuRef}>
                     <button 
                       onClick={() => setIsMenuOpen(!isMenuOpen)} 
                       className="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-100"
                     >
                       <UserIcon className="h-6 w-6 text-gray-700"/>
-                      <span className="font-medium text-sm text-gray-800 hidden sm:inline">
+                      <span className="font-medium text-sm text-gray-800">
                         {userData.username?.split(' ')[0] || 'User'}
                       </span>
                     </button>
