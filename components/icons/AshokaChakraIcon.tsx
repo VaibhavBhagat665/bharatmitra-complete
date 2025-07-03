@@ -6,56 +6,47 @@ export const AshokaChakraIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props)
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="1.5"
+    strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
     {...props}
   >
-    {/* Outer circle representing unity and completeness */}
-    <circle cx="12" cy="12" r="10" className="stroke-blue-600" strokeWidth="2" />
+    {/* Outer circle */}
+    <circle cx="12" cy="12" r="10" />
     
-    {/* India map silhouette - simplified */}
-    <path 
-      d="M8 7c1-1 2-1 3 0s2 1 3 0c1 1 0 2-1 3c0 1 1 2 0 3s-1 1-2 2c-1 0-2-1-3-1s-2 1-3 1c-1-1 0-2 1-3s1-2 1-3c1-1 0-2 1-2z" 
-      className="fill-orange-500/20 stroke-orange-500"
-      strokeWidth="1"
-    />
+    {/* Inner hub */}
+    <circle cx="12" cy="12" r="3" />
     
-    {/* Gear/tech element - small gear in top right */}
-    <g transform="translate(16, 6)">
-      <circle cx="0" cy="0" r="2" className="fill-blue-600" />
-      <circle cx="0" cy="0" r="1" className="fill-white" />
-      <path d="M0-2v1M0 1v1M-2 0h1M1 0h1" className="stroke-blue-600" strokeWidth="0.5" />
+    {/* Primary spokes (8 main directions) */}
+    <g>
+      <path d="M12 2v4" />
+      <path d="M12 18v4" />
+      <path d="M22 12h-4" />
+      <path d="M6 12H2" />
+      <path d="m19.07 4.93-2.83 2.83" />
+      <path d="m7.76 16.24-2.83 2.83" />
+      <path d="m19.07 19.07-2.83-2.83" />
+      <path d="m7.76 7.76-2.83-2.83" />
     </g>
     
-    {/* Handshake/connection element - two hands meeting */}
-    <g transform="translate(12, 16)">
-      <path 
-        d="M-2-1c0.5-0.5 1-0.5 1.5 0s1 0.5 1.5 0c0.5 0.5 0.5 1 0 1.5"
-        className="stroke-green-600"
-        strokeWidth="1.5"
-        fill="none"
-      />
+    {/* Secondary spokes (offset by 22.5 degrees) */}
+    <g transform="rotate(22.5 12 12)">
+      <path d="M12 4v3" />
+      <path d="M12 17v3" />
+      <path d="M20 12h-3" />
+      <path d="M7 12H4" />
+      <path d="m17.66 6.34-2.12 2.12" />
+      <path d="m8.46 15.54-2.12 2.12" />
+      <path d="m17.66 17.66-2.12-2.12" />
+      <path d="m8.46 8.46-2.12-2.12" />
     </g>
     
-    {/* Light bulb for innovation - center */}
-    <g transform="translate(12, 12)">
-      <circle cx="0" cy="-1" r="2" className="fill-yellow-400/30 stroke-yellow-600" strokeWidth="1" />
-      <path d="M-1 1h2M-0.5 2h1" className="stroke-yellow-600" strokeWidth="1" />
-      <path d="M0-2.5v-0.5" className="stroke-yellow-600" strokeWidth="1.5" />
-    </g>
-    
-    {/* People/community element - small figures at bottom */}
-    <g transform="translate(12, 18)">
-      <circle cx="-2" cy="0" r="0.5" className="fill-purple-500" />
-      <circle cx="0" cy="0" r="0.5" className="fill-purple-500" />
-      <circle cx="2" cy="0" r="0.5" className="fill-purple-500" />
-      <path d="M-2.5 0.5v1M-0.5 0.5v1M1.5 0.5v1" className="stroke-purple-500" strokeWidth="1" />
-    </g>
-    
-    {/* Digital/tech lines connecting elements */}
-    <g className="stroke-blue-400/50" strokeWidth="0.5">
-      <path d="M12 8l4-2M12 8l-4 6M12 8v8" strokeDasharray="2,2" />
+    {/* Decorative inner pattern */}
+    <g>
+      <circle cx="12" cy="8" r="0.5" />
+      <circle cx="12" cy="16" r="0.5" />
+      <circle cx="16" cy="12" r="0.5" />
+      <circle cx="8" cy="12" r="0.5" />
     </g>
   </svg>
 );
