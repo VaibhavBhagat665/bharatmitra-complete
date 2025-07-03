@@ -46,7 +46,7 @@ const content = {
     farmersDesc: 'Get crop insurance, subsidies for equipment, and income support schemes like PM-KISAN.',
     citizensTitle: '🏠 For All Citizens',
     citizensDesc: 'Learn about Ayushman Bharat, housing schemes, and social welfare benefits for everyone.',
-    testimonialsTitle: '✨ What People Are Saying',
+    // testimonialsTitle: '✨ What People Are Saying',
     knowledgeHubTitle: '📚 Bharat Knowledge Hub',
     faqTitle: '🤔 Frequently Asked Questions',
     faqData: [
@@ -111,7 +111,7 @@ const content = {
     farmersDesc: 'फसल बीमा, उपकरण सब्सिडी और PM-KISAN जैसी आय सहायता योजनाएं प्राप्त करें।',
     citizensTitle: '🏠 सभी नागरिकों के लिए',
     citizensDesc: 'आयुष्मान भारत, आवास योजनाओं और सभी के लिए सामाजिक कल्याण लाभों के बारे में जानें।',
-    testimonialsTitle: '✨ लोग क्या कह रहे हैं',
+    // testimonialsTitle: '✨ लोग क्या कह रहे हैं',
     knowledgeHubTitle: '📚 भारत ज्ञान केंद्र',
     faqTitle: '🤔 अक्सर पूछे जाने वाले प्रश्न',
     faqData: [
@@ -271,7 +271,7 @@ const HomePage: React.FC = () => {
       {/* 🔸 Remaining Page Section (Testimonial + Marquee + FAQ) */}
       <div className="bg-red-50 px-6 py-16">
         {/* ✨ Testimonials */}
-        <div className="bg-white bg-opacity-90 p-8 rounded-xl shadow-lg max-w-3xl mx-auto animate-fade-in-up delay-700">
+{/*         <div className="bg-white bg-opacity-90 p-8 rounded-xl shadow-lg max-w-3xl mx-auto animate-fade-in-up delay-700">
           <h2 className="text-2xl font-bold text-red-700 mb-6">{currentContent.testimonialsTitle}</h2>
           <div className="relative h-32 overflow-hidden">
             {currentTestimonials.map((t, idx) => (
@@ -290,7 +290,7 @@ const HomePage: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
 
         {/* 🌐 Bharat Knowledge Hub */}
         <div className="mt-24">
