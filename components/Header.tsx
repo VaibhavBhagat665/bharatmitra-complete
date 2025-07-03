@@ -19,7 +19,7 @@ const Header: React.FC = () => {
     ['/voice-chat', 'Voice Chat'],
     ['/scholarships', 'Scholarships'],
     ['/benefits', 'Benefits'],
-    ['/buy-tokens', 'Buy Tokens'],
+    // ['/buy-tokens', 'Buy Tokens'],
     ['/account', 'My Account']
   ];
 
