@@ -13,6 +13,7 @@ import AuthPage from './pages/AuthPage';
 import AccountPage from './pages/AccountPage';
 import AuthGuard from './components/AuthGuard';
 import { UserContext } from './contexts/UserContext';
+import BuyTokens from './pages/BuyTokens;
 
 const App: React.FC = () => {
   return (
