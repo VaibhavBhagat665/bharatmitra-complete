@@ -20,7 +20,7 @@ const Header: React.FC = () => {
     ['/scholarships', 'Scholarships'],
     ['/benefits', 'Benefits'],
     // ['/buy-tokens', 'Buy Tokens'],
-    ['/account', 'My Account']
+    ['/account', 'My Account'],
   ];
 
   const toggleMobileMenu = () => {
