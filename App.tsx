@@ -26,6 +26,7 @@ const App: React.FC = () => {
             <Route path="/login" element={<AuthPage />} />
 
             {/* Protected Routes */}
+            <Route path="/home" element={<AuthGuard><HomePage /></AuthGuard>} />
             <Route path="/chat" element={<AuthGuard><ChatPage /></AuthGuard>} />
             <Route path="/voice-chat" element={<AuthGuard><VoiceChatPage /></AuthGuard>} />
             <Route path="/benefits" element={<AuthGuard><BenefitsPage /></AuthGuard>} />
