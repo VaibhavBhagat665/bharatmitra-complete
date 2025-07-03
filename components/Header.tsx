@@ -115,8 +115,8 @@ const Header: React.FC = () => {
           {/* Logo + Title */}
           <div className="flex items-center space-x-3">
             <AshokaChakraIcon className="h-10 w-10 text-bharat-blue-800 rotate-slow" />
-            <h1 className="text-xl md:text-1xl font-extrabold text-bharat-blue-900 tracking-tight">
-              Bharat Mitra
+            <h1 className="text-xl md:text-2xl font-extrabold text-bharat-blue-900 tracking-tight">
+              {/*Bharat Mitra */}
             </h1>
           </div>
 
