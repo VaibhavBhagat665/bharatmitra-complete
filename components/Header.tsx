@@ -113,7 +113,7 @@ const Header: React.FC = () => {
               ['/benefits', t.benefits],
               ['/scholarships', t.scholarships],
               ['/leaderboard', t.leaderboard],
-              ['/buy-tokens',t.redeemPage],
+              ['/buy-tokens',t.buyTokens],
               ['/redeem', t.redeem],
             ].map(([to, label]) => (
               <NavLink
