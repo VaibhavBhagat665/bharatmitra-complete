@@ -4,7 +4,6 @@ import { AshokaChakraIcon } from './icons/AshokaChakraIcon';
 import { TokenIcon } from './icons/TokenIcon';
 import { UserContext } from '../contexts/UserContext';
 
-// Add UserIcon component or import it
 const UserIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -12,7 +11,6 @@ const UserIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const Header: React.FC = () => {
-  // Fix: Get all needed values from UserContext
   const { 
     tokenBalance, 
     language, 
@@ -26,7 +24,6 @@ const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Translation object for all text
   const translations = {
     en: {
       home: 'Home',
@@ -75,6 +72,8 @@ const Header: React.FC = () => {
     ['/voice-chat', t.voiceChat],
     ['/scholarships', t.scholarships],
     ['/benefits', t.benefits],
+    ['/leaderboard', t.leaderboard],
+    ['/buy-tokens',t.redeemPage],
     ['/account', t.myAccount],
   ];
 
@@ -87,7 +86,6 @@ const Header: React.FC = () => {
   };
 
   const handleLogout = () => {
-    // Add your logout logic here
     console.log('Logout clicked');
     setIsMenuOpen(false);
   };
@@ -113,6 +111,7 @@ const Header: React.FC = () => {
               ['/benefits', t.benefits],
               ['/scholarships', t.scholarships],
               ['/leaderboard', t.leaderboard],
+              ['/buy-tokens',t.redeemPage],
               ['/redeem', t.redeem],
             ].map(([to, label]) => (
               <NavLink
