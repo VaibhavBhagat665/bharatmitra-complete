@@ -106,7 +106,7 @@ const HomePage: React.FC = () => {
       <div className="bg-red-50 px-6 py-16">
         {/* ✨ Testimonials */}
 
-        <div className="bg-white bg-opacity-90 p-8 rounded-xl shadow-lg max-w-3xl mx-auto animate-fade-in-up delay-700">
+{/*         <div className="bg-white bg-opacity-90 p-8 rounded-xl shadow-lg max-w-3xl mx-auto animate-fade-in-up delay-700">
           <h2 className="text-2xl font-bold text-red-700 mb-6">✨ What People Are Saying</h2>
           <div className="relative h-32 overflow-hidden">
             {testimonials.map((t, idx) => (
@@ -125,7 +125,7 @@ const HomePage: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
         {/* 🌐 Bharat Knowledge Hub */}
         <div className="mt-24">
           <h2 className="text-3xl font-extrabold text-bharat-blue-900 mb-8 text-center flex items-center justify-center gap-2">
