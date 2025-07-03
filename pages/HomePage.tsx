@@ -50,7 +50,7 @@ const HomePage: React.FC = () => {
         </div>
 
           <h1 className="text-4xl md:text-5xl font-extrabold mb-4 drop-shadow-md animate-fade-in-up">
-            🇮🇳 Welcome to Bharat Mitra
+            Welcome to Bharat Mitra
           </h1>
 
           <p className="text-lg md:text-xl max-w-3xl mx-auto mb-8 animate-fade-in-up delay-200">
