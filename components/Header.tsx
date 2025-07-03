@@ -75,7 +75,8 @@ const Header: React.FC = () => {
     ['/scholarships', t.scholarships],
     ['/benefits', t.benefits],
     ['/leaderboard', t.leaderboard],
-    ['/buy-tokens',t.redeemPage],
+    ['/redeem',t.redeemPage],
+    ['/buy-tokens',t.buyTokens],
     ['/account', t.myAccount],
   ];
 
