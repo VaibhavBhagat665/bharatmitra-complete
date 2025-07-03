@@ -26,18 +26,56 @@ const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Translation object for all text
+  const translations = {
+    en: {
+      home: 'Home',
+      chat: 'Chat',
+      voiceChat: 'Voice Chat',
+      benefits: 'Benefits',
+      scholarships: 'Scholarships',
+      leaderboard: 'Leaderboard',
+      redeem: 'Redeem',
+      myAccount: 'My Account',
+      logout: 'Logout',
+      signIn: 'Sign In',
+      english: 'English',
+      hindi: 'हिंदी',
+      user: 'User',
+      processing: 'Processing...'
+    },
+    hi: {
+      home: 'होम',
+      chat: 'चैट',
+      voiceChat: 'वॉयस चैट',
+      benefits: 'लाभ',
+      scholarships: 'छात्रवृत्ति',
+      leaderboard: 'लीडरबोर्ड',
+      redeem: 'रिडीम करें',
+      myAccount: 'मेरा खाता',
+      logout: 'लॉगआउट',
+      signIn: 'साइन इन',
+      english: 'English',
+      hindi: 'हिंदी',
+      user: 'उपयोगकर्ता',
+      processing: 'प्रोसेसिंग...'
+    }
+  };
+
+  const t = translations[language] || translations.en;
+
   const linkStyle =
     'text-gray-600 hover:text-bharat-blue-700 px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200';
   const activeLinkStyle =
     'text-bharat-blue-800 bg-bharat-blue-100 shadow-inner';
 
   const mobileMenuItems = [
-    ['/home', 'Home'],
-    ['/chat', 'Chat'],
-    ['/voice-chat', 'Voice Chat'],
-    ['/scholarships', 'Scholarships'],
-    ['/benefits', 'Benefits'],
-    ['/account', 'My Account'],
+    ['/', t.home],
+    ['/chat', t.chat],
+    ['/voice-chat', t.voiceChat],
+    ['/scholarships', t.scholarships],
+    ['/benefits', t.benefits],
+    ['/account', t.myAccount],
   ];
 
   const toggleMobileMenu = () => {
@@ -69,13 +107,13 @@ const Header: React.FC = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-2">
             {[
-              ['/', 'Home'],
-              ['/chat', 'Chat'],
-              ['/voice-chat', 'Voice Chat'],
-              ['/benefits', 'Benefits'],
-              ['/scholarships', 'Scholarships'],
-              ['/leaderboard', 'Leaderboard'],
-              ['/redeem', 'Redeem'],
+              ['/', t.home],
+              ['/chat', t.chat],
+              ['/voice-chat', t.voiceChat],
+              ['/benefits', t.benefits],
+              ['/scholarships', t.scholarships],
+              ['/leaderboard', t.leaderboard],
+              ['/redeem', t.redeem],
             ].map(([to, label]) => (
               <NavLink
                 key={to}
@@ -103,7 +141,7 @@ const Header: React.FC = () => {
                       : 'text-gray-600'
                   }`}
                 >
-                  {lang === 'en' ? 'English' : 'हिंदी'}
+                  {lang === 'en' ? t.english : t.hindi}
                 </button>
               ))}
             </div>
@@ -128,7 +166,7 @@ const Header: React.FC = () => {
                     >
                       <UserIcon className="h-6 w-6 text-gray-700"/>
                       <span className="font-medium text-sm text-gray-800">
-                        {userData.username?.split(' ')[0] || 'User'}
+                        {userData.username?.split(' ')[0] || t.user}
                       </span>
                     </button>
                     {isMenuOpen && (
@@ -138,13 +176,13 @@ const Header: React.FC = () => {
                           onClick={() => setIsMenuOpen(false)} 
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
-                          My Account
+                          {t.myAccount}
                         </Link>
                         <button 
                           onClick={handleLogout} 
                           className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
-                          Logout
+                          {t.logout}
                         </button>
                       </div>
                     )}
@@ -155,7 +193,7 @@ const Header: React.FC = () => {
                   to="/login" 
                   className="bg-bharat-blue-700 text-white font-bold py-2 px-6 rounded-full text-sm hover:bg-bharat-blue-800 transition-transform transform hover:scale-105 shadow-lg"
                 >
-                  Sign In
+                  {t.signIn}
                 </Link>
               )}
             </div>
