@@ -9,6 +9,8 @@ type Perk = {
   price: number;
   icon: React.ElementType;
   category: 'Premium' | 'Mentorship' | 'Exam' | 'Daily' | 'Mystery';
+  // Optional image URL - if not provided, will use category-based default
+  imageUrl?: string;
 };
 
 interface PerkCardProps {
@@ -33,6 +35,20 @@ const PerkCard: React.FC<PerkCardProps> = ({ perk, userTokens, onRedeem, isRedee
     }
   };
 
+  // Function to get category-specific image URLs from Unsplash
+  const getCategoryImage = (category: string) => {
+    const imageMap = {
+      'Premium': 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&h=200&fit=crop&crop=center',
+      'Mentorship': 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=200&fit=crop&crop=center',
+      'Exam': 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=200&fit=crop&crop=center',
+      'Daily': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=200&fit=crop&crop=center',
+      'Mystery': 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=200&fit=crop&crop=center'
+    };
+    return imageMap[category] || 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&h=200&fit=crop&crop=center';
+  };
+
+  const imageUrl = perk.imageUrl || getCategoryImage(perk.category);
+
   return (
     <div
       className={`
@@ -41,26 +57,47 @@ const PerkCard: React.FC<PerkCardProps> = ({ perk, userTokens, onRedeem, isRedee
         hover:shadow-red-300 transform hover:scale-[1.02] ${isRedeeming ? 'opacity-75' : ''}
       `}
     >
-      <div className="p-6">
-        {/* Category Badge */}
-        <div className="flex justify-between items-start mb-4">
-          <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold border ${getCategoryColor(perk.category)}`}>
+      {/* Hero Image */}
+      <div className="relative h-48 overflow-hidden">
+        <img 
+          src={imageUrl}
+          alt={`${perk.name} - ${perk.category}`}
+          className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+          onError={(e) => {
+            // Fallback to a gradient if image fails to load
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+            const parent = target.parentElement;
+            if (parent) {
+              parent.className += ' bg-gradient-to-br from-red-400 to-red-600';
+            }
+          }}
+        />
+        
+        {/* Overlay gradient for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+        
+        {/* Category Badge - positioned over image */}
+        <div className="absolute top-4 left-4">
+          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border backdrop-blur-sm ${getCategoryColor(perk.category)}`}>
             {perk.category}
           </span>
         </div>
 
-        {/* Icon */}
-        <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-3xl">
+        {/* Icon overlay - positioned over image */}
+        <div className="absolute bottom-4 right-4">
+          <div className="w-12 h-12 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-2xl shadow-lg">
             <IconComponent />
           </div>
         </div>
+      </div>
 
+      <div className="p-6 flex-grow">
         {/* Title */}
-        <h3 className="text-xl font-bold text-center text-red-800 mb-2">{perk.name}</h3>
+        <h3 className="text-xl font-bold text-center text-red-800 mb-3">{perk.name}</h3>
 
         {/* Description */}
-        <p className="text-gray-600 text-center text-sm">{perk.description}</p>
+        <p className="text-gray-600 text-center text-sm leading-relaxed">{perk.description}</p>
       </div>
 
       {/* Price & Button */}
