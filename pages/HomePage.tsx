@@ -3,18 +3,18 @@ import { Link } from 'react-router-dom';
 import { AshokaChakraIcon } from '../components/icons/AshokaChakraIcon';
 
 const testimonials = [
-  {
-    name: 'Anjali, B.Tech Student',
-    message: 'Bharat Mitra helped me find a scholarship I never knew existed. It made a real difference!',
-  },
-  {
-    name: 'Rajeev, Farmer from MP',
-    message: 'I got info on PM-KISAN easily. The chatbot spoke in Hindi and made it simple!',
-  },
-  {
-    name: 'Meena, Homemaker',
-    message: 'I found health schemes for my family with just one question. Great work!',
-  },
+  // {
+  //   name: 'Anjali, B.Tech Student',
+  //   message: 'Bharat Mitra helped me find a scholarship I never knew existed. It made a real difference!',
+  // },
+  // {
+  //   name: 'Rajeev, Farmer from MP',
+  //   message: 'I got info on PM-KISAN easily. The chatbot spoke in Hindi and made it simple!',
+  // },
+  // {
+  //   name: 'Meena, Homemaker',
+  //   message: 'I found health schemes for my family with just one question. Great work!',
+  // },
 ];
 
 const HomePage: React.FC = () => {
@@ -54,7 +54,7 @@ const HomePage: React.FC = () => {
           </h1>
 
           <p className="text-lg md:text-xl max-w-3xl mx-auto mb-8 animate-fade-in-up delay-200">
-            Your trusted AI assistant for navigating Indian government schemes. Ask in your own language and get clear answers about scholarships, farmer support, and citizen benefits.
+            Your trusted AI assistant for navigating Indian government schemes. Ask in your English/Hindi and get clear answers about scholarships, farmer support, and citizen benefits.
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-12 animate-fade-in-up delay-300">
