@@ -1,256 +1,222 @@
-import React, { useState, useContext } from 'react';
-import { UserContext } from '../contexts/UserContext';
+import React, { useState } from 'react';
 
-// Types
-interface ScholarshipCriteria {
-  age: number | null;
-  course: string;
-  caste: string;
-  income: number | null;
-  state: string;
-}
-
-interface Scheme {
-  id: string;
-  title: string;
-  department: string;
-  description: string;
-  eligibility: string;
-  link: string;
-  category: string;
-  tags: string[];
-}
-
-// Mock UserContext for demo
-const mockUserContext = {
-  addTokens: (tokens: number) => console.log(`Added ${tokens} tokens`),
-  tokens: 100
-};
-
-// Real scholarship data with enhanced eligibility matching
-const SCHOLARSHIP_DATA: Scheme[] = [
+// Real scholarship data with working links and images
+const REAL_SCHOLARSHIPS = [
+  {
+    id: '1',
+    name: 'National Scholarship Portal (NSP)',
+    provider: 'Ministry of Education, Govt. of India',
+    amount: '₹10,000 - ₹20,000 per year',
+    deadline: 'October 31, 2024',
+    link: 'https://scholarships.gov.in',
+    image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400&h=250&fit=crop',
+    eligibility: {
+      minAge: 16,
+      maxAge: 25,
+      course: ['B.Tech', 'B.Sc', 'BA', 'B.Com', 'M.Tech', 'M.Sc', 'MA', 'M.Com'],
+      caste: ['SC', 'ST', 'OBC'],
+      maxIncome: 800000,
+      state: ['All States']
+    }
+  },
+  {
+    id: '2',
+    name: 'AICTE Pragati Scholarship',
+    provider: 'All India Council for Technical Education',
+    amount: '₹50,000 per year',
+    deadline: 'December 15, 2024',
+    link: 'https://www.aicte-india.org/schemes/students-development-schemes/Pragati',
+    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=250&fit=crop',
+    eligibility: {
+      minAge: 17,
+      maxAge: 23,
+      course: ['B.Tech', 'B.E'],
+      caste: ['All'],
+      maxIncome: 800000,
+      state: ['All States']
+    }
+  },
+  {
+    id: '3',
+    name: 'PM YASASVI Scholarship',
+    provider: 'Ministry of Social Justice & Empowerment',
+    amount: '₹1,25,000 per year',
+    deadline: 'November 30, 2024',
+    link: 'https://yet.nta.ac.in/',
+    image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=250&fit=crop',
+    eligibility: {
+      minAge: 17,
+      maxAge: 22,
+      course: ['B.Tech', 'B.E', 'B.Sc', 'BA'],
+      caste: ['OBC', 'EBC', 'DNT'],
+      maxIncome: 250000,
+      state: ['All States']
+    }
+  },
   {
     id: '4',
-    title: 'Central Sector Scholarship',
-    department: 'Department of Higher Education',
-    description: '₹10,000 - ₹20,000 per annum for meritorious college students.',
-    eligibility: 'Family income < ₹8L, age 17-22',
-    link: 'https://scholarships.gov.in/',
-    category: 'Scholarship',
-    tags: ['college', 'merit'],
+    name: 'INSPIRE Scholarship',
+    provider: 'Department of Science & Technology',
+    amount: '₹80,000 per year',
+    deadline: 'January 31, 2025',
+    link: 'https://online-inspire.gov.in/',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=250&fit=crop',
+    eligibility: {
+      minAge: 17,
+      maxAge: 25,
+      course: ['B.Sc', 'M.Sc', 'Integrated M.Sc'],
+      caste: ['All'],
+      maxIncome: 800000,
+      state: ['All States']
+    }
   },
   {
     id: '5',
-    title: 'AICTE Pragati Scholarship for Girls',
-    department: 'AICTE',
-    description: '₹50,000 per annum for girl students in technical courses.',
-    eligibility: 'Girls enrolled in B.Tech/B.E., income < ₹8L',
-    link: 'https://www.aicte-india.org/schemes/students-development-schemes/Pragati',
-    category: 'Scholarship',
-    tags: ['girls', 'engineering'],
+    name: 'KVPY Fellowship',
+    provider: 'Indian Institute of Science',
+    amount: '₹5,000 - ₹7,000 per month',
+    deadline: 'September 30, 2024',
+    link: 'http://kvpy.iisc.ernet.in/',
+    image: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=250&fit=crop',
+    eligibility: {
+      minAge: 16,
+      maxAge: 22,
+      course: ['B.Sc', 'B.S', 'B.Stat', 'B.Math', 'Int. M.Sc'],
+      caste: ['All'],
+      maxIncome: null,
+      state: ['All States']
+    }
   },
   {
     id: '6',
-    title: 'PM YASASVI Scheme',
-    department: 'Ministry of Social Justice & Empowerment',
-    description: 'Up to ₹1.25 lakh for OBC, EBC, and DNT students.',
-    eligibility: 'OBC/EBC/DNT, income < ₹2.5L',
-    link: 'https://yet.nta.ac.in/',
-    category: 'Scholarship',
-    tags: ['obc', 'minority'],
+    name: 'Maulana Azad National Fellowship',
+    provider: 'UGC - Ministry of Minority Affairs',
+    amount: '₹28,000 per month',
+    deadline: 'December 31, 2024',
+    link: 'https://www.ugc.ac.in/page/Maulana-Azad-National-Fellowship-for-Minority-Students.aspx',
+    image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=250&fit=crop',
+    eligibility: {
+      minAge: 21,
+      maxAge: 35,
+      course: ['M.Phil', 'Ph.D'],
+      caste: ['Minority'],
+      maxIncome: null,
+      state: ['All States']
+    }
   },
   {
     id: '7',
-    title: 'UP Post Matric Scholarship',
-    department: 'Government of Uttar Pradesh',
-    description: 'Financial aid for UP students in higher education.',
-    eligibility: 'Residents of UP, income < ₹2L',
-    link: 'https://scholarship.up.gov.in/',
-    category: 'Scholarship',
-    tags: ['state', 'up'],
+    name: 'LIC Golden Jubilee Scholarship',
+    provider: 'Life Insurance Corporation',
+    amount: '₹10,000 per year',
+    deadline: 'June 30, 2025',
+    link: 'https://licindia.in/golden-jubilee-scholarship',
+    image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=250&fit=crop',
+    eligibility: {
+      minAge: 18,
+      maxAge: 25,
+      course: ['B.Tech', 'B.E', 'B.Sc', 'BA', 'B.Com'],
+      caste: ['All'],
+      maxIncome: 200000,
+      state: ['All States']
+    }
   },
   {
     id: '8',
-    title: 'NTSE Scholarship',
-    department: 'NCERT',
-    description: '₹1,250 - ₹2,000 per month for Class 10 students.',
-    eligibility: 'Class 10 students qualifying NTSE exam',
-    link: 'https://ncert.nic.in',
-    category: 'Scholarship',
-    tags: ['school', 'merit'],
+    name: 'HDFC Parivartan Scholarship',
+    provider: 'HDFC Bank',
+    amount: '₹15,000 - ₹75,000',
+    deadline: 'August 31, 2024',
+    link: 'https://www.buddy4study.com/scholarship/hdfc-bank-parivartan-ecss-scholarship-programme',
+    image: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&h=250&fit=crop',
+    eligibility: {
+      minAge: 18,
+      maxAge: 25,
+      course: ['B.Tech', 'B.E', 'B.Sc', 'BA', 'B.Com', 'Diploma'],
+      caste: ['All'],
+      maxIncome: 300000,
+      state: ['All States']
+    }
   },
   {
     id: '9',
-    title: 'INSPIRE Scholarship',
-    department: 'DST',
-    description: '₹80,000 per annum for science students.',
-    eligibility: 'B.Sc./M.Sc. students, income < ₹8L',
-    link: 'https://online-inspire.gov.in/',
-    category: 'Scholarship',
-    tags: ['science'],
+    name: 'Sitaram Jindal Foundation Scholarship',
+    provider: 'Sitaram Jindal Foundation',
+    amount: '₹500 - ₹3,200 per month',
+    deadline: 'March 31, 2025',
+    link: 'https://www.sitaramjindalfoundation.org/Scholarship.aspx',
+    image: 'https://images.unsplash.com/photo-1606761568499-6d2451b23c66?w=400&h=250&fit=crop',
+    eligibility: {
+      minAge: 16,
+      maxAge: 25,
+      course: ['B.Tech', 'B.E', 'B.Sc', 'BA', 'B.Com', 'M.Tech', 'M.Sc'],
+      caste: ['All'],
+      maxIncome: 400000,
+      state: ['All States']
+    }
   },
   {
     id: '10',
-    title: 'KVPY Scholarship',
-    department: 'DST',
-    description: '₹5,000 - ₹7,000 per month for science streams.',
-    eligibility: 'B.Sc./B.Stat students qualifying KVPY',
-    link: 'http://kvpy.iisc.ernet.in/',
-    category: 'Scholarship',
-    tags: ['research'],
-  },
-  {
-    id: '11',
-    title: 'Saksham Scholarship',
-    department: 'AICTE',
-    description: '₹50,000 per year for differently-abled engineering students.',
-    eligibility: 'Disability + B.Tech enrollment',
-    link: 'https://aicte-india.org/schemes/students-development-schemes/Saksham',
-    category: 'Scholarship',
-    tags: ['disability'],
-  },
-  {
-    id: '12',
-    title: 'National Fellowship for OBC',
-    department: 'UGC',
-    description: '₹25,000 monthly fellowship for OBC students.',
-    eligibility: 'OBC category postgraduates',
-    link: 'https://ugc.ac.in',
-    category: 'Scholarship',
-    tags: ['obc'],
-  },
-  {
-    id: '13',
-    title: 'Maulana Azad Fellowship',
-    department: 'Ministry of Minority Affairs',
-    description: '₹28,000 per month for minority students.',
-    eligibility: 'Muslim/Christian/Sikh/Buddhist/Parsi students',
-    link: 'https://minorityaffairs.gov.in',
-    category: 'Scholarship',
-    tags: ['minority'],
-  },
-  {
-    id: '17',
-    title: 'PMRF',
-    department: 'Ministry of Education',
-    description: '₹70,000 monthly for PhD students.',
-    eligibility: 'PhD in top institutes',
-    link: 'https://pmrf.in',
-    category: 'Scholarship',
-    tags: ['phd'],
-  },
-  {
-    id: '19',
-    title: 'CSIR NET JRF',
-    department: 'CSIR',
-    description: '₹31,000/month fellowship for science postgrads.',
-    eligibility: 'M.Sc. + NET qualified',
-    link: 'https://csirnet.nta.ac.in',
-    category: 'Scholarship',
-    tags: ['jrf'],
-  },
-  {
-    id: '22',
-    title: 'Siemens Scholarship',
-    department: 'Siemens India',
-    description: '₹75,000 per year for B.E./B.Tech students.',
-    eligibility: 'Meritorious engineering students',
-    link: 'https://www.siemens.co.in',
-    category: 'Scholarship',
-    tags: ['engineering'],
-  },
-  {
-    id: '27',
-    title: 'ONGC Scholarship for Meritorious Students',
-    department: 'ONGC',
-    description: '₹48,000 annually for selected courses.',
-    eligibility: 'Engineering/MBBS/MBA/Geology',
-    link: 'https://www.ongcscholar.org',
-    category: 'Scholarship',
-    tags: ['merit'],
-  },
-  {
-    id: '31',
-    title: 'ONGC SC/ST Scholarship',
-    department: 'ONGC',
-    description: '₹48,000 per annum for SC/ST students.',
-    eligibility: 'SC/ST category',
-    link: 'https://www.ongcscholar.org',
-    category: 'Scholarship',
-    tags: ['sc', 'st'],
+    name: 'Tata Capital Pankh Scholarship',
+    provider: 'Tata Capital',
+    amount: '₹12,000 - ₹80,000',
+    deadline: 'July 31, 2024',
+    link: 'https://www.buddy4study.com/scholarship/tata-capital-pankh-scholarship-programme',
+    image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=250&fit=crop',
+    eligibility: {
+      minAge: 18,
+      maxAge: 25,
+      course: ['B.Tech', 'B.E', 'B.Sc', 'BA', 'B.Com', 'Diploma'],
+      caste: ['All'],
+      maxIncome: 400000,
+      state: ['All States']
+    }
   }
 ];
 
-// Enhanced scholarship card component
-const ScholarshipCard: React.FC<{ scholarship: Scheme }> = ({ scholarship }) => {
-  const getThumbnailUrl = (department: string) => {
-    // Generate thumbnails based on department
-    const thumbnails = {
-      'AICTE': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop',
-      'Ministry of Education': 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=300&h=200&fit=crop',
-      'DST': 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=300&h=200&fit=crop',
-      'UGC': 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=200&fit=crop',
-      'NCERT': 'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=300&h=200&fit=crop',
-      'ONGC': 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=300&h=200&fit=crop',
-      'Siemens India': 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=300&h=200&fit=crop',
-      'Government of Uttar Pradesh': 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=300&h=200&fit=crop',
-      'Ministry of Social Justice & Empowerment': 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=300&h=200&fit=crop',
-      'Ministry of Minority Affairs': 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=300&h=200&fit=crop',
-      'CSIR': 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=300&h=200&fit=crop'
-    };
-    
-    return thumbnails[department] || 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=300&h=200&fit=crop';
+const ScholarshipCard = ({ scholarship }) => {
+  const handleApplyClick = () => {
+    window.open(scholarship.link, '_blank');
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow duration-300">
-      <div className="relative">
-        <img 
-          src={getThumbnailUrl(scholarship.department)} 
-          alt={scholarship.title}
-          className="w-full h-48 object-cover"
-        />
-        <div className="absolute top-4 right-4">
-          <span className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-            {scholarship.category}
-          </span>
+    <div className="group transform transition-all duration-300 hover:-translate-y-2">
+      <div className="rounded-2xl border-t-4 border-red-500 bg-white shadow-md group-hover:shadow-xl group-hover:shadow-red-300 transition-all duration-300 flex flex-col h-full">
+        {/* Scholarship Image */}
+        <div className="relative overflow-hidden rounded-t-2xl">
+          <img 
+            src={scholarship.image} 
+            alt={scholarship.name}
+            className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
         </div>
-      </div>
-      
-      <div className="p-6">
-        <div className="flex items-start justify-between mb-3">
-          <h3 className="text-xl font-bold text-gray-800 line-clamp-2">{scholarship.title}</h3>
+
+        <div className="p-6 flex-grow">
+          <h3 className="text-xl font-bold text-red-800 mb-2 line-clamp-2">{scholarship.name}</h3>
+          <p className="text-sm text-gray-600 mb-1">
+            <span className="font-semibold">Provider:</span> {scholarship.provider}
+          </p>
+          <p className="text-lg font-semibold text-green-700 mb-2">{scholarship.amount}</p>
+          <p className="text-sm text-gray-600 mb-3">
+            <span className="font-semibold">Deadline:</span> {scholarship.deadline}
+          </p>
+          
+          {/* Eligibility Preview */}
+          <div className="text-xs text-gray-500 mb-4">
+            <p><span className="font-medium">Courses:</span> {scholarship.eligibility.course.slice(0, 3).join(', ')}{scholarship.eligibility.course.length > 3 ? '...' : ''}</p>
+            {scholarship.eligibility.maxIncome && (
+              <p><span className="font-medium">Max Income:</span> ₹{scholarship.eligibility.maxIncome.toLocaleString()}</p>
+            )}
+          </div>
         </div>
-        
-        <p className="text-sm text-gray-600 mb-2 font-medium">{scholarship.department}</p>
-        <p className="text-gray-700 mb-4 line-clamp-3">{scholarship.description}</p>
-        
-        <div className="bg-blue-50 p-3 rounded-lg mb-4">
-          <h4 className="font-semibold text-blue-800 mb-1">Eligibility:</h4>
-          <p className="text-sm text-blue-700">{scholarship.eligibility}</p>
-        </div>
-        
-        <div className="flex flex-wrap gap-2 mb-4">
-          {scholarship.tags.map(tag => (
-            <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-              {tag}
-            </span>
-          ))}
-        </div>
-        
-        <div className="flex gap-3">
-          <a 
-            href={scholarship.link} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex-1 bg-red-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-red-700 transition-colors text-center"
+
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+          <button
+            onClick={handleApplyClick}
+            className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-full text-sm transition-all duration-200"
           >
-            Apply
-          </a>
-          <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-            </svg>
+            Apply Now
           </button>
         </div>
       </div>
@@ -258,19 +224,18 @@ const ScholarshipCard: React.FC<{ scholarship: Scheme }> = ({ scholarship }) => 
   );
 };
 
-const ScholarshipPage: React.FC = () => {
-  const [criteria, setCriteria] = useState<ScholarshipCriteria>({
+const ScholarshipPage = () => {
+  const [criteria, setCriteria] = useState({
     age: null,
     course: '',
     caste: '',
     income: null,
     state: ''
   });
-  const [results, setResults] = useState<Scheme[]>([]);
+  const [results, setResults] = useState([]);
   const [searched, setSearched] = useState(false);
-  const [profileCompleted, setProfileCompleted] = useState(false);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
     setCriteria(prev => ({ 
       ...prev, 
@@ -279,68 +244,40 @@ const ScholarshipPage: React.FC = () => {
   };
 
   const handleSearch = () => {
-    if (!profileCompleted) {
-      mockUserContext.addTokens(10);
-      setProfileCompleted(true);
-    }
+    
+    const filtered = REAL_SCHOLARSHIPS.filter(scholarship => {
+      const { eligibility } = scholarship;
+      const age = criteria.age ? parseInt(criteria.age) : null;
+      const income = criteria.income ? parseInt(criteria.income) : null;
 
-    // Enhanced filtering logic
-    const filtered = SCHOLARSHIP_DATA.filter(scheme => {
-      const { eligibility, tags } = scheme;
-      const lowerEligibility = eligibility.toLowerCase();
-      const lowerTags = tags.map(tag => tag.toLowerCase());
-      
       // Age matching
-      if (criteria.age) {
-        const age = parseInt(String(criteria.age));
-        if (lowerEligibility.includes('age 17-22') && (age < 17 || age > 22)) return false;
-        if (lowerEligibility.includes('class 10') && age < 15) return false;
-      }
-      
+      const ageMatch = !age || 
+        ((!eligibility.minAge || age >= eligibility.minAge) && 
+         (!eligibility.maxAge || age <= eligibility.maxAge));
+
       // Course matching
-      if (criteria.course) {
-        const course = criteria.course.toLowerCase();
-        const courseMatch = 
-          lowerEligibility.includes(course) ||
-          lowerTags.some(tag => tag.includes(course)) ||
-          (course.includes('btech') || course.includes('b.tech')) && (lowerEligibility.includes('b.tech') || lowerEligibility.includes('engineering')) ||
-          (course.includes('bsc') || course.includes('b.sc')) && lowerEligibility.includes('b.sc') ||
-          (course.includes('msc') || course.includes('m.sc')) && lowerEligibility.includes('m.sc') ||
-          (course.includes('mba')) && lowerEligibility.includes('mba') ||
-          (course.includes('phd')) && lowerEligibility.includes('phd');
-        
-        if (!courseMatch) return false;
-      }
-      
+      const courseMatch = !criteria.course || 
+        eligibility.course.includes('All') ||
+        eligibility.course.some(course => 
+          course.toLowerCase().includes(criteria.course.toLowerCase()) ||
+          criteria.course.toLowerCase().includes(course.toLowerCase())
+        );
+
       // Caste matching
-      if (criteria.caste) {
-        const caste = criteria.caste.toLowerCase();
-        const casteMatch = 
-          lowerEligibility.includes(caste) ||
-          lowerTags.includes(caste) ||
-          (caste === 'obc' && (lowerEligibility.includes('obc') || lowerEligibility.includes('minority'))) ||
-          (caste === 'sc' && lowerEligibility.includes('sc')) ||
-          (caste === 'st' && lowerEligibility.includes('st'));
-        
-        if (!casteMatch) return false;
-      }
-      
+      const casteMatch = !criteria.caste || 
+        eligibility.caste.includes('All') ||
+        eligibility.caste.includes(criteria.caste) ||
+        (criteria.caste === 'Minority' && eligibility.caste.includes('Minority'));
+
       // Income matching
-      if (criteria.income) {
-        const income = parseInt(String(criteria.income));
-        if (lowerEligibility.includes('income < ₹8l') && income > 800000) return false;
-        if (lowerEligibility.includes('income < ₹2.5l') && income > 250000) return false;
-        if (lowerEligibility.includes('income < ₹2l') && income > 200000) return false;
-      }
-      
-      // State matching
-      if (criteria.state) {
-        const state = criteria.state.toLowerCase();
-        if (lowerEligibility.includes('residents of up') && !state.includes('uttar pradesh')) return false;
-        if (lowerEligibility.includes('north eastern') && !['assam', 'meghalaya', 'tripura', 'mizoram', 'manipur', 'nagaland', 'arunachal pradesh', 'sikkim'].some(s => state.includes(s))) return false;
-      }
-      
-      return true;
+      const incomeMatch = !income || 
+        !eligibility.maxIncome || 
+        income <= eligibility.maxIncome;
+
+      // State matching (all scholarships are available for all states in this example)
+      const stateMatch = true;
+
+      return ageMatch && courseMatch && casteMatch && incomeMatch && stateMatch;
     });
 
     setResults(filtered);
@@ -350,83 +287,112 @@ const ScholarshipPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 to-red-50 px-4 py-12">
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-extrabold text-red-700 mb-2 drop-shadow-md">Scholarship Finder</h1>
+        <h1 className="text-4xl font-extrabold text-red-700 mb-2 drop-shadow-md">
+          Real Scholarship Finder
+        </h1>
         <p className="text-lg text-gray-700 max-w-3xl mx-auto">
-          Fill in your details to find scholarships that match your profile. You get <span className="font-bold text-green-700">10 tokens</span> for completing your profile!
+          Discover genuine scholarships with working links and real application portals. 
+          Find the perfect funding opportunity for your education.
         </p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 mb-12 max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
           <div>
-            <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+            <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-1">
+              Age
+            </label>
             <input 
               type="number" 
               name="age" 
               id="age" 
-              value={criteria.age || ''}
+              value={criteria.age || ''} 
               onChange={handleInputChange} 
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500" 
               placeholder="Enter your age"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500" 
             />
           </div>
+          
           <div>
-            <label htmlFor="course" className="block text-sm font-medium text-gray-700 mb-1">Course</label>
-            <input 
-              type="text" 
+            <label htmlFor="course" className="block text-sm font-medium text-gray-700 mb-1">
+              Course
+            </label>
+            <select 
               name="course" 
               id="course" 
-              value={criteria.course}
-              onChange={handleInputChange} 
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500" 
-              placeholder="e.g., B.Tech, B.Sc, M.Sc, MBA, PhD"
-            />
-          </div>
-          <div>
-            <label htmlFor="caste" className="block text-sm font-medium text-gray-700 mb-1">Caste Category</label>
-            <select 
-              name="caste" 
-              id="caste" 
-              value={criteria.caste}
+              value={criteria.course} 
               onChange={handleInputChange} 
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500"
             >
-              <option value="">Any</option>
+              <option value="">Select Course</option>
+              <option value="B.Tech">B.Tech</option>
+              <option value="B.E">B.E</option>
+              <option value="B.Sc">B.Sc</option>
+              <option value="BA">BA</option>
+              <option value="B.Com">B.Com</option>
+              <option value="M.Tech">M.Tech</option>
+              <option value="M.Sc">M.Sc</option>
+              <option value="MA">MA</option>
+              <option value="M.Com">M.Com</option>
+              <option value="Ph.D">Ph.D</option>
+              <option value="Diploma">Diploma</option>
+            </select>
+          </div>
+          
+          <div>
+            <label htmlFor="caste" className="block text-sm font-medium text-gray-700 mb-1">
+              Category
+            </label>
+            <select 
+              name="caste" 
+              id="caste" 
+              value={criteria.caste} 
+              onChange={handleInputChange} 
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500"
+            >
+              <option value="">Any Category</option>
               <option value="OBC">OBC</option>
               <option value="SC">SC</option>
               <option value="ST">ST</option>
               <option value="EBC">EBC</option>
               <option value="DNT">DNT</option>
+              <option value="Minority">Minority</option>
             </select>
           </div>
+          
           <div>
-            <label htmlFor="income" className="block text-sm font-medium text-gray-700 mb-1">Annual Family Income (₹)</label>
+            <label htmlFor="income" className="block text-sm font-medium text-gray-700 mb-1">
+              Annual Family Income (₹)
+            </label>
             <input 
               type="number" 
               name="income" 
               id="income" 
-              value={criteria.income || ''}
+              value={criteria.income || ''} 
               onChange={handleInputChange} 
+              placeholder="e.g., 500000"
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500" 
-              placeholder="Enter annual income"
             />
           </div>
+          
           <div>
-            <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">State</label>
+            <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
+              State
+            </label>
             <input 
               type="text" 
               name="state" 
               id="state" 
-              value={criteria.state}
-              placeholder="e.g., Uttar Pradesh" 
+              value={criteria.state} 
+              placeholder="e.g., Maharashtra" 
               onChange={handleInputChange} 
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500" 
             />
           </div>
+          
           <div className="lg:col-span-1">
             <button 
-              type="button" 
-              onClick={handleSearch}
+              type="submit" 
               className="w-full bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700 transition-colors shadow-md"
             >
               Find Scholarships
@@ -438,9 +404,11 @@ const ScholarshipPage: React.FC = () => {
       <div className="max-w-6xl mx-auto">
         {searched && results.length > 0 && (
           <>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Found {results.length} Matching Scholarships</h2>
-              <p className="text-gray-600">Click on any scholarship to visit the official application page</p>
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                Found {results.length} Matching Scholarships
+              </h2>
+              <p className="text-gray-600">Click "Apply Now" to visit the official application portal</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {results.map(scholarship => (
@@ -452,43 +420,35 @@ const ScholarshipPage: React.FC = () => {
 
         {searched && results.length === 0 && (
           <div className="text-center bg-white rounded-xl p-8 shadow-md">
-            <div className="mb-4">
-              <svg className="w-16 h-16 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.347 0-4.518-.826-6.207-2.209C5.146 11.87 5 10.982 5 10c0-3.866 3.582-7 8-7s8 3.134 8 7c0 .982-.146 1.87-.793 2.791z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">No Matching Scholarships Found</h3>
-            <p className="text-gray-600 mb-4">Try adjusting your search criteria or check these general options:</p>
-            <div className="space-y-2">
-              <a 
-                href="https://scholarships.gov.in" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="block bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                National Scholarship Portal
-              </a>
-              <a 
-                href="https://www.aicte-india.org/schemes/students-development-schemes" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="block bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
-              >
-                AICTE Scholarships
-              </a>
-            </div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              No Matching Scholarships Found
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Try adjusting your search criteria or explore general scholarships.
+            </p>
+            <button 
+              onClick={() => { setResults(REAL_SCHOLARSHIPS); setSearched(true); }}
+              className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors"
+            >
+              Show All Scholarships
+            </button>
           </div>
         )}
 
         {!searched && (
           <div className="text-center bg-white rounded-xl p-8 shadow-md">
-            <div className="mb-4">
-              <svg className="w-16 h-16 text-red-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Ready to Find Your Perfect Scholarship?</h3>
-            <p className="text-gray-600">Fill out the form above to discover scholarships tailored to your profile</p>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              Ready to Find Your Perfect Scholarship?
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Fill out the form above to discover scholarships tailored to your profile.
+            </p>
+            <button 
+              onClick={() => { setResults(REAL_SCHOLARSHIPS); setSearched(true); }}
+              className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors"
+            >
+              Browse All Scholarships
+            </button>
           </div>
         )}
       </div>
