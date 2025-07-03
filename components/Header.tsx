@@ -10,6 +10,12 @@ const UserIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+const ChevronDownIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+  </svg>
+);
+
 const Header: React.FC = () => {
   const { 
     tokenBalance, 
@@ -22,7 +28,9 @@ const Header: React.FC = () => {
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isTokenMenuOpen, setIsTokenMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const tokenMenuRef = useRef<HTMLDivElement>(null);
 
   const translations = {
     en: {
@@ -68,6 +76,7 @@ const Header: React.FC = () => {
   const activeLinkStyle =
     'text-bharat-blue-800 bg-bharat-blue-100 shadow-inner';
 
+  // Updated mobile menu items - removed buy-tokens and redeem
   const mobileMenuItems = [
     ['/', t.home],
     ['/chat', t.chat],
@@ -75,8 +84,6 @@ const Header: React.FC = () => {
     ['/scholarships', t.scholarships],
     ['/benefits', t.benefits],
     ['/leaderboard', t.leaderboard],
-    ['/redeem',t.redeemPage],
-    ['/buy-tokens',t.buyTokens],
     ['/account', t.myAccount],
   ];
 
@@ -93,6 +100,14 @@ const Header: React.FC = () => {
     setIsMenuOpen(false);
   };
 
+  const toggleTokenMenu = () => {
+    setIsTokenMenuOpen(!isTokenMenuOpen);
+  };
+
+  const closeTokenMenu = () => {
+    setIsTokenMenuOpen(false);
+  };
+
   return (
     <header className="bg-white/80 backdrop-blur-sm shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4">
@@ -105,7 +120,7 @@ const Header: React.FC = () => {
             </h1>
           </div>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation - Updated to remove buy-tokens and redeem */}
           <nav className="hidden md:flex items-center space-x-2">
             {[
               ['/', t.home],
@@ -114,8 +129,6 @@ const Header: React.FC = () => {
               ['/benefits', t.benefits],
               ['/scholarships', t.scholarships],
               ['/leaderboard', t.leaderboard],
-              ['/buy-tokens',t.buyTokens],
-              ['/redeem', t.redeem],
             ].map(([to, label]) => (
               <NavLink
                 key={to}
@@ -148,18 +161,46 @@ const Header: React.FC = () => {
               ))}
             </div>
 
-            {/* Token Display */}
+            {/* Token Display with Dropdown */}
             <div className="flex items-center space-x-4">
               {loading ? (
                 <div className="h-10 w-24 bg-gray-200 rounded-full animate-pulse"></div>
               ) : user && userData ? (
                 <>
-                  <div className="flex items-center space-x-3 bg-bharat-green-100 border border-bharat-green-200 px-4 py-2 rounded-full shadow-sm">
-                    <TokenIcon className="h-6 w-6 text-bharat-green-600" />
-                    <span className="font-bold text-lg text-gray-900">
-                      {userData.bharat_tokens || 0}
-                    </span>
+                  {/* Token Display Button with Dropdown */}
+                  <div className="relative" ref={tokenMenuRef}>
+                    <button 
+                      onClick={toggleTokenMenu}
+                      className="flex items-center space-x-2 bg-bharat-green-100 border border-bharat-green-200 px-4 py-2 rounded-full shadow-sm hover:bg-bharat-green-200 transition-all duration-200"
+                    >
+                      <TokenIcon className="h-6 w-6 text-bharat-green-600" />
+                      <span className="font-bold text-lg text-gray-900">
+                        {userData.bharat_tokens || 0}
+                      </span>
+                      <ChevronDownIcon className={`h-4 w-4 text-gray-600 transition-transform duration-200 ${isTokenMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {/* Token Dropdown Menu */}
+                    {isTokenMenuOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border">
+                        <Link 
+                          to="/buy-tokens" 
+                          onClick={closeTokenMenu} 
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          {t.buyTokens}
+                        </Link>
+                        <Link 
+                          to="/redeem" 
+                          onClick={closeTokenMenu} 
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          {t.redeem}
+                        </Link>
+                      </div>
+                    )}
                   </div>
+                  
                   {/* Desktop Account Menu - Hidden on mobile */}
                   <div className="relative hidden md:block" ref={menuRef}>
                     <button 
@@ -247,6 +288,31 @@ const Header: React.FC = () => {
                   {label}
                 </NavLink>
               ))}
+              
+              {/* Mobile Token Menu - Show only when user is logged in */}
+              {user && userData && (
+                <>
+                  <div className="border-t border-gray-200 pt-2 mt-2">
+                    <div className="px-4 py-2 text-sm font-medium text-gray-500">
+                      Token Options
+                    </div>
+                    <Link
+                      to="/buy-tokens"
+                      onClick={closeMobileMenu}
+                      className="block px-4 py-3 rounded-lg font-medium text-base transition-all duration-200 text-gray-600 hover:text-bharat-blue-700 hover:bg-gray-50"
+                    >
+                      {t.buyTokens}
+                    </Link>
+                    <Link
+                      to="/redeem"
+                      onClick={closeMobileMenu}
+                      className="block px-4 py-3 rounded-lg font-medium text-base transition-all duration-200 text-gray-600 hover:text-bharat-blue-700 hover:bg-gray-50"
+                    >
+                      {t.redeem}
+                    </Link>
+                  </div>
+                </>
+              )}
             </nav>
           </div>
         )}
