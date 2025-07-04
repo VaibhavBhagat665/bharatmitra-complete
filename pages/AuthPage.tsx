@@ -4,29 +4,27 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  sendEmailVerification,
+  getAdditionalUserInfo,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase/config';
 import { useUser } from '../contexts/UserContext';
 import { UserProfile } from '../types';
 
 const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [showResetPassword, setShowResetPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [emailForReset, setEmailForReset] = useState('');
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [birthday, setBirthday] = useState('');
   const [occupation, setOccupation] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
   
   const { user } = useUser();
   const navigate = useNavigate();
@@ -40,165 +38,71 @@ const AuthPage: React.FC = () => {
     }
   }, [user, navigate, from]);
 
-  // Handle Google sign-in redirect result
-  useEffect(() => {
-    const handleRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-          await handleGoogleSignInResult(result);
-        }
-      } catch (error) {
-        console.error('Google redirect error:', error);
-        setError('Google sign-in failed. Please try again.');
-      }
-    };
-
-    handleRedirectResult();
-  }, []);
-
-  // Clear messages after 5 seconds
-  useEffect(() => {
-    if (success || error) {
-      const timer = setTimeout(() => {
-        setSuccess('');
-        setError('');
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [success, error]);
-
-  const sendLoginNotificationEmail = async (userEmail: string, userName: string) => {
-    // Note: This would require a backend service or Firebase Functions
-    // For demonstration, we'll just log it
-    console.log(`Login notification email would be sent to: ${userEmail}`);
-    
-    // In a real implementation, you'd call a Firebase Function or backend API:
-    // await functions().httpsCallable('sendLoginNotification')({
-    //   email: userEmail,
-    //   name: userName,
-    //   loginTime: new Date().toISOString()
-    // });
-  };
-
-  const handleGoogleSignInResult = async (result: any) => {
-    const user = result.user;
-    
-    try {
-      // Check if user exists in database
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        // User exists, sign them in
-        setSuccess('Successfully signed in with Google!');
-        await sendLoginNotificationEmail(user.email!, user.displayName || 'User');
-        navigate(from, { replace: true });
-      } else {
-        // User doesn't exist, create their profile
-        const userRef = doc(db, 'users', user.uid);
-        const newUserProfile: UserProfile = {
-          uid: user.uid,
-          username: user.displayName || 'Google User',
-          email: user.email || '',
-          birthday: '', // Will need to be filled later
-          occupation: '', // Will need to be filled later
-          joined_at: serverTimestamp(),
-          auth_provider: 'google',
-          bharat_tokens: 50, // Welcome bonus
-          scheme_history: [],
-        };
-        await setDoc(userRef, newUserProfile);
-        
-        setSuccess('Account created successfully with Google!');
-        await sendLoginNotificationEmail(user.email!, user.displayName || 'User');
-        navigate(from, { replace: true });
-      }
-    } catch (error) {
-      console.error('Error handling Google sign-in:', error);
-      setError('Failed to process Google sign-in. Please try again.');
-    }
-  };
-
   const handleGoogleSignIn = async () => {
     setError('');
     setSuccess('');
     setLoading(true);
-    
     try {
-      // Clear any previous auth state
-      if (auth.currentUser) {
-        await auth.signOut();
-      }
-
-      // Try popup first, fallback to redirect on mobile
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      if (isMobile) {
-        // Use redirect for mobile devices
-        await signInWithRedirect(auth, googleProvider);
-        // The result will be handled by the useEffect above
-      } else {
-        // Use popup for desktop
         const result = await signInWithPopup(auth, googleProvider);
-        await handleGoogleSignInResult(result);
-      }
+        const user = result.user;
+        const additionalInfo = getAdditionalUserInfo(result);
+
+        // Check if it's a new user
+        if (additionalInfo?.isNewUser) {
+            const userRef = doc(db, 'users', user.uid);
+            const newUserProfile: UserProfile = {
+                uid: user.uid,
+                username: user.displayName || 'New User',
+                email: user.email || '',
+                birthday: '', // to be filled by user
+                occupation: '', // to be filled by user
+                joined_at: serverTimestamp(),
+                auth_provider: 'google',
+                bharat_tokens: 50, // Welcome bonus
+                scheme_history: [],
+            };
+            await setDoc(userRef, newUserProfile);
+             // Redirect to account page to complete profile
+            navigate('/account');
+        } else {
+            navigate(from, { replace: true });
+        }
     } catch (err: any) {
-      console.error('Google sign-in error:', err);
-      
-      // Handle specific error cases
-      if (err.code === 'auth/popup-blocked') {
-        setError('Popup was blocked. Please allow popups for this site and try again.');
-      } else if (err.code === 'auth/popup-closed-by-user') {
-        setError('Sign-in was cancelled. Please try again.');
-      } else if (err.code === 'auth/network-request-failed') {
-        setError('Network error. Please check your connection and try again.');
-      } else if (err.code === 'auth/too-many-requests') {
-        setError('Too many failed attempts. Please try again later.');
-      } else if (err.code === 'auth/user-disabled') {
-        setError('This account has been disabled. Please contact support.');
-      } else if (err.code === 'auth/operation-not-allowed') {
-        setError('Google sign-in is not enabled. Please contact support.');
-      } else if (err.code === 'auth/cancelled-popup-request') {
-        // Multiple popup requests, ignore this error
-        return;
-      } else {
-        setError(`Google sign-in failed: ${err.message}`);
-      }
+        console.error('Google sign-in error:', err);
+        setError(err.message || 'Failed to sign in with Google');
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!emailForReset) {
-      setError('Please enter your email address');
-      return;
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(emailForReset)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
     setLoading(true);
+
+    if (!resetEmail) {
+      setError('Please enter your email address');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await sendPasswordResetEmail(auth, emailForReset);
-      setSuccess('Password reset email sent! Check your inbox and spam folder.');
-      setShowForgotPassword(false);
-      setEmailForReset('');
+      await sendPasswordResetEmail(auth, resetEmail);
+      setSuccess('Password reset email sent! Check your inbox and follow the instructions.');
+      setResetEmail('');
+      setTimeout(() => {
+        setShowResetPassword(false);
+        setSuccess('');
+      }, 3000);
     } catch (err: any) {
       console.error('Password reset error:', err);
       if (err.code === 'auth/user-not-found') {
         setError('No account found with this email address.');
       } else if (err.code === 'auth/invalid-email') {
-        setError('Invalid email address format.');
-      } else if (err.code === 'auth/too-many-requests') {
-        setError('Too many reset requests. Please try again later.');
+        setError('Please enter a valid email address.');
       } else {
-        setError('Failed to send password reset email. Please try again.');
+        setError('Failed to send reset email. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -218,14 +122,6 @@ const AuthPage: React.FC = () => {
       return;
     }
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email address');
-      setLoading(false);
-      return;
-    }
-
     if (!isLogin && (!fullName || !birthday || !occupation)) {
       setError('All fields are required for registration');
       setLoading(false);
@@ -239,96 +135,85 @@ const AuthPage: React.FC = () => {
     }
 
     if (isLogin) {
-      // Sign In
-      try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        if (!user.emailVerified) {
-          setError('Please verify your email before signing in. Check your inbox for the verification link.');
-          await auth.signOut(); // Sign out unverified user
-          setLoading(false);
-          return;
+        // Sign In
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            navigate(from, { replace: true });
+        } catch (err: any) {
+            console.error('Sign-in error:', err);
+            if (err.code === 'auth/user-not-found') {
+              setError('No account found with this email address.');
+            } else if (err.code === 'auth/wrong-password') {
+              setError('Incorrect password. Please try again.');
+            } else if (err.code === 'auth/invalid-email') {
+              setError('Please enter a valid email address.');
+            } else if (err.code === 'auth/too-many-requests') {
+              setError('Too many failed attempts. Please try again later.');
+            } else {
+              setError('Failed to sign in. Please check your credentials.');
+            }
         }
-        
-        setSuccess('Successfully signed in!');
-        await sendLoginNotificationEmail(user.email!, user.displayName || 'User');
-        navigate(from, { replace: true });
-      } catch (err: any) {
-        console.error('Sign-in error:', err);
-        if (err.code === 'auth/user-not-found') {
-          setError('No account found with this email. Please create an account first.');
-        } else if (err.code === 'auth/wrong-password') {
-          setError('Incorrect password. Please try again.');
-        } else if (err.code === 'auth/invalid-email') {
-          setError('Invalid email address format.');
-        } else if (err.code === 'auth/user-disabled') {
-          setError('This account has been disabled. Please contact support.');
-        } else if (err.code === 'auth/too-many-requests') {
-          setError('Too many failed attempts. Please try again later.');
-        } else {
-          setError('Failed to sign in. Please check your credentials.');
-        }
-      }
     } else {
-      // Sign Up
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        // Send email verification
-        await sendEmailVerification(user);
-        
-        const userRef = doc(db, 'users', user.uid);
-        const newUserProfile: UserProfile = {
-          uid: user.uid,
-          username: fullName,
-          email: email,
-          birthday: birthday,
-          occupation: occupation,
-          joined_at: serverTimestamp(),
-          auth_provider: 'email',
-          bharat_tokens: 50, // Welcome bonus
-          scheme_history: [],
-        };
-        await setDoc(userRef, newUserProfile);
-        
-        // Sign out the user until they verify their email
-        await auth.signOut();
-        
-        setSuccess('Account created successfully! Please check your email and verify your account before signing in.');
-        setIsLogin(true); // Switch to sign in mode
-        
-        // Clear form fields
-        setEmail('');
-        setPassword('');
-        setFullName('');
-        setBirthday('');
-        setOccupation('');
-        
-      } catch (err: any) {
-        console.error('Sign-up error:', err);
-        if (err.code === 'auth/email-already-in-use') {
-          setError('This email is already registered. Please sign in instead.');
-        } else if (err.code === 'auth/weak-password') {
-          setError('Password is too weak. Please choose a stronger password.');
-        } else if (err.code === 'auth/invalid-email') {
-          setError('Invalid email address format.');
-        } else if (err.code === 'auth/operation-not-allowed') {
-          setError('Email/password accounts are not enabled. Please contact support.');
-        } else {
-          setError('Failed to create an account. Please try again.');
+        // Sign Up
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            
+            const userRef = doc(db, 'users', user.uid);
+            const newUserProfile: UserProfile = {
+                uid: user.uid,
+                username: fullName,
+                email: email,
+                birthday: birthday,
+                occupation: occupation,
+                joined_at: serverTimestamp(),
+                auth_provider: 'email',
+                bharat_tokens: 50, // Welcome bonus
+                scheme_history: [],
+            };
+            await setDoc(userRef, newUserProfile);
+            setSuccess('Account created successfully! Welcome to Bharat Mitra!');
+            setTimeout(() => {
+              navigate(from, { replace: true });
+            }, 1500);
+        } catch (err: any) {
+            console.error('Sign-up error:', err);
+            if (err.code === 'auth/email-already-in-use') {
+              setError('This email is already registered. Please sign in instead.');
+            } else if (err.code === 'auth/weak-password') {
+              setError('Password is too weak. Please choose a stronger password.');
+            } else if (err.code === 'auth/invalid-email') {
+              setError('Please enter a valid email address.');
+            } else {
+              setError('Failed to create an account. Please try again.');
+            }
         }
-      }
     }
     setLoading(false);
+  };
+
+  const clearMessages = () => {
+    setError('');
+    setSuccess('');
+  };
+
+  const switchMode = () => {
+    setIsLogin(!isLogin);
+    setShowResetPassword(false);
+    clearMessages();
+    // Clear form fields when switching
+    setEmail('');
+    setPassword('');
+    setFullName('');
+    setBirthday('');
+    setOccupation('');
   };
 
   // Don't render the form if user is already logged in
   if (user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-bharat-blue-50 to-bharat-orange-50 flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-xl shadow-lg">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bharat-blue-600 mx-auto mb-4"></div>
           <p className="text-bharat-blue-700 font-semibold">Redirecting...</p>
         </div>
@@ -337,203 +222,226 @@ const AuthPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-bharat-blue-50 to-bharat-orange-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 backdrop-blur-sm">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-r from-bharat-blue-600 to-bharat-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
+          <div className="bg-gradient-to-r from-bharat-blue-600 to-bharat-blue-700 px-8 py-6 text-center">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span className="text-2xl font-bold text-bharat-blue-700">BM</span>
             </div>
-            <h2 className="text-3xl font-bold text-bharat-blue-900 mb-2">
-              {isLogin ? 'Welcome Back!' : 'Join Bharat Mitra'}
+            <h2 className="text-2xl font-bold text-white mb-1">
+              {showResetPassword ? 'Reset Password' : (isLogin ? 'Welcome Back!' : 'Join Bharat Mitra')}
             </h2>
-            <p className="text-gray-600">
-              {isLogin ? 'Sign in to continue your journey' : 'Create your account to get started'}
+            <p className="text-blue-100 text-sm">
+              {showResetPassword 
+                ? 'Enter your email to receive reset instructions' 
+                : (isLogin ? 'Sign in to continue your journey' : 'Create your account to get started')
+              }
             </p>
           </div>
 
-          {/* Success/Error Messages */}
-          {success && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-800 text-sm text-center font-medium">{success}</p>
-            </div>
-          )}
-          
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800 text-sm text-center font-medium">{error}</p>
-            </div>
-          )}
+          <div className="px-8 py-6">
+            {/* Password Reset Form */}
+            {showResetPassword ? (
+              <form onSubmit={handlePasswordReset} className="space-y-4">
+                <div className="relative">
+                  <input 
+                    type="email" 
+                    placeholder="Enter your email address" 
+                    value={resetEmail} 
+                    onChange={(e) => setResetEmail(e.target.value)} 
+                    required 
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bharat-blue-500 focus:border-transparent transition-all" 
+                  />
+                </div>
 
-          {/* Forgot Password Modal */}
-          {showForgotPassword && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h3 className="font-semibold text-blue-900 mb-3">Reset Password</h3>
-              <input
-                type="email"
-                placeholder="Enter your email address"
-                value={emailForReset}
-                onChange={(e) => setEmailForReset(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bharat-blue-500 mb-3"
-              />
-              <div className="flex space-x-2">
-                <button
-                  onClick={handleForgotPassword}
-                  disabled={loading}
-                  className="flex-1 bg-bharat-blue-600 text-white py-2 px-4 rounded-lg hover:bg-bharat-blue-700 disabled:bg-gray-400 transition-colors text-sm"
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {success && (
+                  <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg text-sm">
+                    {success}
+                  </div>
+                )}
+
+                <button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="w-full bg-bharat-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-bharat-blue-700 disabled:bg-gray-400 transition-colors flex items-center justify-center"
                 >
-                  {loading ? 'Sending...' : 'Send Reset Email'}
+                  {loading ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  ) : (
+                    'Send Reset Email'
+                  )}
                 </button>
-                <button
-                  onClick={() => setShowForgotPassword(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors text-sm"
+
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setShowResetPassword(false);
+                    clearMessages();
+                    setResetEmail('');
+                  }}
+                  className="w-full text-bharat-blue-600 hover:text-bharat-blue-700 font-medium py-2 transition-colors"
                 >
-                  Cancel
+                  ← Back to Sign In
                 </button>
-              </div>
-            </div>
-          )}
-
-          {/* Google Sign In Button */}
-          <button 
-            onClick={handleGoogleSignIn} 
-            disabled={loading} 
-            className="w-full flex items-center justify-center bg-white border-2 border-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:bg-gray-200 transition-all duration-200 mb-6 shadow-sm"
-          >
-            <img 
-              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
-              alt="Google logo" 
-              className="w-5 h-5 mr-3" 
-            />
-            {loading ? 'Processing...' : 'Continue with Google'}
-          </button>
-
-          {/* Rest of the form remains the same */}
-          <div className="my-6 flex items-center">
-            <div className="flex-grow border-t border-gray-300"></div>
-            <span className="flex-shrink mx-4 text-gray-500 text-sm">or</span>
-            <div className="flex-grow border-t border-gray-300"></div>
-          </div>
-
-          {/* Email/Password Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+              </form>
+            ) : (
+              /* Main Auth Form */
               <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="Enter your full name" 
-                    value={fullName} 
-                    onChange={e => setFullName(e.target.value)} 
-                    required 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bharat-blue-500 focus:border-transparent transition-all duration-200" 
-                  />
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {!isLogin && (
+                    <>
+                      <div className="relative">
+                        <input 
+                          type="text" 
+                          placeholder="Full Name" 
+                          value={fullName} 
+                          onChange={(e) => setFullName(e.target.value)} 
+                          required 
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bharat-blue-500 focus:border-transparent transition-all" 
+                        />
+                      </div>
+                      <div className="relative">
+                        <input 
+                          type="date" 
+                          value={birthday} 
+                          onChange={(e) => setBirthday(e.target.value)} 
+                          required 
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bharat-blue-500 focus:border-transparent transition-all" 
+                        />
+                      </div>
+                      <div className="relative">
+                        <input 
+                          type="text" 
+                          placeholder="Occupation (e.g., Student, Farmer)" 
+                          value={occupation} 
+                          onChange={(e) => setOccupation(e.target.value)} 
+                          required 
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bharat-blue-500 focus:border-transparent transition-all" 
+                        />
+                      </div>
+                    </>
+                  )}
+                  
+                  <div className="relative">
+                    <input 
+                      type="email" 
+                      placeholder="Email Address" 
+                      value={email} 
+                      onChange={(e) => setEmail(e.target.value)} 
+                      required 
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bharat-blue-500 focus:border-transparent transition-all" 
+                    />
+                  </div>
+                  
+                  <div className="relative">
+                    <input 
+                      type="password" 
+                      placeholder="Password" 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                      required 
+                      minLength={6}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bharat-blue-500 focus:border-transparent transition-all" 
+                    />
+                  </div>
+
+                  {isLogin && (
+                    <div className="text-right">
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setShowResetPassword(true);
+                          clearMessages();
+                        }}
+                        className="text-sm text-bharat-blue-600 hover:text-bharat-blue-700 hover:underline transition-colors"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                  )}
+
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm flex items-center">
+                      <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
+                      </svg>
+                      {error}
+                    </div>
+                  )}
+
+                  {success && (
+                    <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg text-sm flex items-center">
+                      <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                      </svg>
+                      {success}
+                    </div>
+                  )}
+
+                  <button 
+                    type="submit" 
+                    disabled={loading} 
+                    className="w-full bg-gradient-to-r from-bharat-blue-600 to-bharat-blue-700 text-white font-semibold py-3 px-4 rounded-lg hover:from-bharat-blue-700 hover:to-bharat-blue-800 disabled:from-gray-400 disabled:to-gray-400 transition-all duration-200 flex items-center justify-center shadow-lg"
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    ) : (
+                      <>
+                        {isLogin ? 'Sign In' : 'Create Account'}
+                        <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                      </>
+                    )}
+                  </button>
+                </form>
+                
+                <div className="my-6 flex items-center">
+                  <div className="flex-grow border-t border-gray-300"></div>
+                  <span className="flex-shrink mx-4 text-gray-400 text-sm">OR</span>
+                  <div className="flex-grow border-t border-gray-300"></div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Birthday</label>
-                  <input 
-                    type="date" 
-                    value={birthday} 
-                    onChange={e => setBirthday(e.target.value)} 
-                    required 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bharat-blue-500 focus:border-transparent transition-all duration-200" 
+
+                <button 
+                  onClick={handleGoogleSignIn} 
+                  disabled={loading} 
+                  className="w-full flex items-center justify-center bg-white border-2 border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-50 hover:border-gray-300 disabled:bg-gray-200 transition-all duration-200 shadow-sm"
+                >
+                  <img 
+                    src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+                    alt="Google logo" 
+                    className="w-5 h-5 mr-3" 
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Occupation</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g., Student, Farmer, Engineer" 
-                    value={occupation} 
-                    onChange={e => setOccupation(e.target.value)} 
-                    required 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bharat-blue-500 focus:border-transparent transition-all duration-200" 
-                  />
+                  Continue with Google
+                </button>
+                
+                <div className="text-center mt-6 pt-4 border-t border-gray-100">
+                  <p className="text-gray-600 text-sm">
+                    {isLogin ? "Don't have an account?" : "Already have an account?"}
+                  </p>
+                  <button 
+                    onClick={switchMode}
+                    className="font-semibold text-bharat-blue-600 hover:text-bharat-blue-700 mt-1 transition-colors"
+                  >
+                    {isLogin ? 'Create Account' : 'Sign In Instead'}
+                  </button>
                 </div>
               </>
             )}
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-              <input 
-                type="email" 
-                placeholder="Enter your email address" 
-                value={email} 
-                onChange={e => setEmail(e.target.value)} 
-                required 
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bharat-blue-500 focus:border-transparent transition-all duration-200" 
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input 
-                type="password" 
-                placeholder="Enter your password" 
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
-                required 
-                minLength={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bharat-blue-500 focus:border-transparent transition-all duration-200" 
-              />
-            </div>
-
-            {/* Forgot Password Link */}
-            {isLogin && (
-              <div className="text-right">
-                <button 
-                  type="button"
-                  onClick={() => setShowForgotPassword(true)}
-                  className="text-sm text-bharat-blue-600 hover:text-bharat-blue-800 hover:underline"
-                >
-                  Forgot your password?
-                </button>
-              </div>
-            )}
-
-            <button 
-              type="submit" 
-              disabled={loading} 
-              className="w-full bg-gradient-to-r from-bharat-blue-600 to-bharat-blue-700 text-white font-bold py-3 px-4 rounded-lg hover:from-bharat-blue-700 hover:to-bharat-blue-800 disabled:from-gray-400 disabled:to-gray-500 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Processing...
-                </div>
-              ) : (
-                isLogin ? 'Sign In' : 'Create Account'
-              )}
-            </button>
-          </form>
-          
-          {/* Switch between Login/Register */}
-          <div className="text-center mt-6 pt-4 border-t border-gray-200">
-            <p className="text-gray-600">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}
-            </p>
-            <button 
-              onClick={() => { 
-                setIsLogin(!isLogin); 
-                setError('');
-                setSuccess('');
-                setShowForgotPassword(false);
-                // Clear form fields when switching
-                setEmail('');
-                setPassword('');
-                setFullName('');
-                setBirthday('');
-                setOccupation('');
-              }} 
-              className="font-semibold text-bharat-blue-600 hover:text-bharat-blue-800 hover:underline mt-2 inline-block"
-            >
-              {isLogin ? 'Create an account' : 'Sign in instead'}
-            </button>
           </div>
+        </div>
+        
+        {/* Footer */}
+        <div className="text-center mt-6 text-gray-500 text-xs">
+          <p>By continuing, you agree to our Terms of Service and Privacy Policy</p>
         </div>
       </div>
     </div>
