@@ -205,34 +205,34 @@ const HomePage: React.FC = () => {
           playsInline
           className="absolute top-0 left-0 w-full h-full object-cover"
         >
-          <source src="https://d1j51sstdvqdsm.cloudfront.net/m5gssv%2Ffile%2F3d9086511e7ac238590f23565e9bb2db_ec5a3a99952703ab7060ba0efa91300b.mp4?response-content-disposition=inline%3Bfilename%3D%223d9086511e7ac238590f23565e9bb2db_ec5a3a99952703ab7060ba0efa91300b.mp4%22%3B&response-content-type=video%2Fmp4&Expires=1751665151&Signature=A1A626L8YSbtZdZcq7z-ckw2NjvIAiizGkJ3g-6Xtt5WHgLVsqEcqQGDc8efFxDYvTDGFc9GtebXn8INhUdRjTzGtaZiYQf7iK1EXOo1f02Ybb8aCskjNqA3Myrkl-MfK~nOwXdv-NQbfAVK0K1s8sxoCes~MA8i8vZg46Y2p3uJMSF2XuoF5efKE8MO-4v-t3CJmSOHyIjHp9klQ3mv6nxP~2QxBHH1iF5O~3TqCvXiZze3cNYLWT48-t42O21D8ing6KjiI5KWjYyv9kaxlOj8YR792YIBerpQb7QfB43O74cKJ5LF-MO5LMZmvD1uswDEyzKPduWJpLIX5D1K8w__&Key-Pair-Id=APKAJT5WQLLEOADKLHBQ" type="video/mp4" />
+          <source src="https://videos.pexels.com/video-files/30113222/12915429_1920_1080_25fps.mp4" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
 
         <div className="relative z-10 px-6 py-12 backdrop-blur-sm bg-black/20 min-h-screen flex flex-col justify-center">
         {/* Ashoka Chakra */}
         <div className="flex justify-center items-center mb-6 animate-fade-in">
-          <AshokaChakraIcon className="h-20 w-20 text-white rotate-slow drop-shadow-2xl" />
+          <AshokaChakraIcon className="h-20 w-20 text-white rotate-slow" />
         </div>
 
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 drop-shadow-2xl text-shadow-strong animate-fade-in-up">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 drop-shadow-md animate-fade-in-up">
             {currentContent.title}
           </h1>
 
-          <p className="text-lg md:text-xl max-w-3xl mx-auto mb-8 drop-shadow-xl text-shadow-medium animate-fade-in-up delay-200">
+          <p className="text-lg md:text-xl max-w-3xl mx-auto mb-8 animate-fade-in-up delay-200">
             {currentContent.subtitle}
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-12 animate-fade-in-up delay-300">
             <Link
               to="/chat"
-              className="bg-bharat-blue-700 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-bharat-blue-800 transform hover:scale-105 transition-all shadow-2xl drop-shadow-xl"
+              className="bg-bharat-blue-700 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-bharat-blue-800 transform hover:scale-105 transition-all shadow-lg"
             >
               {currentContent.startChatButton}
             </Link>
             <Link
               to="/benefits"
-              className="bg-bharat-saffron-500 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-bharat-saffron-600 transform hover:scale-105 transition-all shadow-2xl drop-shadow-xl"
+              className="bg-bharat-saffron-500 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-bharat-saffron-600 transform hover:scale-105 transition-all shadow-lg"
             >
               {currentContent.benefitsButton}
             </Link>
@@ -258,10 +258,10 @@ const HomePage: React.FC = () => {
             ].map((info, idx) => (
               <div
                 key={idx}
-                className={`bg-white/95 p-6 rounded-2xl shadow-2xl border-t-4 ${info.border} backdrop-blur-sm`}
+                className={`bg-white/90 p-6 rounded-2xl shadow-xl border-t-4 ${info.border}`}
               >
-                <h3 className="text-xl font-bold text-bharat-blue-900 mb-2 drop-shadow-sm">{info.title}</h3>
-                <p className="text-gray-700 drop-shadow-sm">{info.description}</p>
+                <h3 className="text-xl font-bold text-bharat-blue-900 mb-2">{info.title}</h3>
+                <p className="text-gray-700">{info.description}</p>
               </div>
             ))}
           </div>
@@ -337,24 +337,6 @@ const HomePage: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Custom CSS for text shadows */}
-      <style jsx>{`
-        .text-shadow-strong {
-          text-shadow: 
-            0 0 10px rgba(0, 0, 0, 0.8),
-            0 0 20px rgba(0, 0, 0, 0.6),
-            0 0 30px rgba(0, 0, 0, 0.4),
-            2px 2px 4px rgba(0, 0, 0, 0.9);
-        }
-        
-        .text-shadow-medium {
-          text-shadow: 
-            0 0 8px rgba(0, 0, 0, 0.7),
-            0 0 16px rgba(0, 0, 0, 0.5),
-            1px 1px 3px rgba(0, 0, 0, 0.8);
-        }
-      `}</style>
     </>
   );
 };
