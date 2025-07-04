@@ -4,7 +4,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
-  getAdditionalUserInfo,
+  signInWithRedirect,
+  getRedirectResult,
   sendEmailVerification,
   sendPasswordResetEmail
 } from 'firebase/auth';
@@ -39,6 +40,23 @@ const AuthPage: React.FC = () => {
     }
   }, [user, navigate, from]);
 
+  // Handle Google sign-in redirect result
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          await handleGoogleSignInResult(result);
+        }
+      } catch (error) {
+        console.error('Google redirect error:', error);
+        setError('Google sign-in failed. Please try again.');
+      }
+    };
+
+    handleRedirectResult();
+  }, []);
+
   // Clear messages after 5 seconds
   useEffect(() => {
     if (success || error) {
@@ -63,15 +81,10 @@ const AuthPage: React.FC = () => {
     // });
   };
 
-  const handleGoogleSignIn = async () => {
-    setError('');
-    setSuccess('');
-    setLoading(true);
+  const handleGoogleSignInResult = async (result: any) => {
+    const user = result.user;
     
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      
       // Check if user exists in database
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
@@ -82,16 +95,76 @@ const AuthPage: React.FC = () => {
         await sendLoginNotificationEmail(user.email!, user.displayName || 'User');
         navigate(from, { replace: true });
       } else {
-        // User doesn't exist, sign them out and prompt to create account
+        // User doesn't exist, create their profile
+        const userRef = doc(db, 'users', user.uid);
+        const newUserProfile: UserProfile = {
+          uid: user.uid,
+          username: user.displayName || 'Google User',
+          email: user.email || '',
+          birthday: '', // Will need to be filled later
+          occupation: '', // Will need to be filled later
+          joined_at: serverTimestamp(),
+          auth_provider: 'google',
+          bharat_tokens: 50, // Welcome bonus
+          scheme_history: [],
+        };
+        await setDoc(userRef, newUserProfile);
+        
+        setSuccess('Account created successfully with Google!');
+        await sendLoginNotificationEmail(user.email!, user.displayName || 'User');
+        navigate(from, { replace: true });
+      }
+    } catch (error) {
+      console.error('Error handling Google sign-in:', error);
+      setError('Failed to process Google sign-in. Please try again.');
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setSuccess('');
+    setLoading(true);
+    
+    try {
+      // Clear any previous auth state
+      if (auth.currentUser) {
         await auth.signOut();
-        setError('Account not found. Please create an account first.');
-        setIsLogin(false); // Switch to sign up mode
-        setEmail(user.email || '');
-        setFullName(user.displayName || '');
+      }
+
+      // Try popup first, fallback to redirect on mobile
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        // Use redirect for mobile devices
+        await signInWithRedirect(auth, googleProvider);
+        // The result will be handled by the useEffect above
+      } else {
+        // Use popup for desktop
+        const result = await signInWithPopup(auth, googleProvider);
+        await handleGoogleSignInResult(result);
       }
     } catch (err: any) {
       console.error('Google sign-in error:', err);
-      setError(err.message || 'Failed to sign in with Google');
+      
+      // Handle specific error cases
+      if (err.code === 'auth/popup-blocked') {
+        setError('Popup was blocked. Please allow popups for this site and try again.');
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setError('Sign-in was cancelled. Please try again.');
+      } else if (err.code === 'auth/network-request-failed') {
+        setError('Network error. Please check your connection and try again.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please try again later.');
+      } else if (err.code === 'auth/user-disabled') {
+        setError('This account has been disabled. Please contact support.');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('Google sign-in is not enabled. Please contact support.');
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        // Multiple popup requests, ignore this error
+        return;
+      } else {
+        setError(`Google sign-in failed: ${err.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -103,14 +176,30 @@ const AuthPage: React.FC = () => {
       return;
     }
 
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailForReset)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
     setLoading(true);
     try {
       await sendPasswordResetEmail(auth, emailForReset);
-      setSuccess('Password reset email sent! Check your inbox.');
+      setSuccess('Password reset email sent! Check your inbox and spam folder.');
       setShowForgotPassword(false);
       setEmailForReset('');
     } catch (err: any) {
-      setError('Failed to send password reset email. Please check your email address.');
+      console.error('Password reset error:', err);
+      if (err.code === 'auth/user-not-found') {
+        setError('No account found with this email address.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address format.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many reset requests. Please try again later.');
+      } else {
+        setError('Failed to send password reset email. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -125,6 +214,14 @@ const AuthPage: React.FC = () => {
     // Basic validation
     if (!email || !password) {
       setError('Email and password are required');
+      setLoading(false);
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
       setLoading(false);
       return;
     }
@@ -149,6 +246,7 @@ const AuthPage: React.FC = () => {
         
         if (!user.emailVerified) {
           setError('Please verify your email before signing in. Check your inbox for the verification link.');
+          await auth.signOut(); // Sign out unverified user
           setLoading(false);
           return;
         }
@@ -164,6 +262,10 @@ const AuthPage: React.FC = () => {
           setError('Incorrect password. Please try again.');
         } else if (err.code === 'auth/invalid-email') {
           setError('Invalid email address format.');
+        } else if (err.code === 'auth/user-disabled') {
+          setError('This account has been disabled. Please contact support.');
+        } else if (err.code === 'auth/too-many-requests') {
+          setError('Too many failed attempts. Please try again later.');
         } else {
           setError('Failed to sign in. Please check your credentials.');
         }
@@ -212,6 +314,8 @@ const AuthPage: React.FC = () => {
           setError('Password is too weak. Please choose a stronger password.');
         } else if (err.code === 'auth/invalid-email') {
           setError('Invalid email address format.');
+        } else if (err.code === 'auth/operation-not-allowed') {
+          setError('Email/password accounts are not enabled. Please contact support.');
         } else {
           setError('Failed to create an account. Please try again.');
         }
@@ -307,7 +411,7 @@ const AuthPage: React.FC = () => {
             {loading ? 'Processing...' : 'Continue with Google'}
           </button>
 
-          {/* Divider */}
+          {/* Rest of the form remains the same */}
           <div className="my-6 flex items-center">
             <div className="flex-grow border-t border-gray-300"></div>
             <span className="flex-shrink mx-4 text-gray-500 text-sm">or</span>
