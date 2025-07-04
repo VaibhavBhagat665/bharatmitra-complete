@@ -209,7 +209,7 @@ const HomePage: React.FC = () => {
           Your browser does not support the video tag.
         </video>
 
-        <div className="relative z-10 px-6 py-12 backdrop-blur-lg bg-black/40 min-h-screen flex flex-col justify-center">
+        <div className="relative z-10 px-6 py-12 backdrop-blur-sm bg-black/20 min-h-screen flex flex-col justify-center">
         {/* Ashoka Chakra */}
         <div className="flex justify-center items-center mb-6 animate-fade-in">
           <AshokaChakraIcon className="h-20 w-20 text-white rotate-slow drop-shadow-2xl" />
