@@ -203,7 +203,7 @@ const HomePage: React.FC = () => {
           muted
           loop
           playsInline
-          className="absolute top-0 left-0 w-full h-full object-cover filter blur-[1px]"
+          className="absolute top-0 left-0 w-full h-full object-cover filter blur-[0.4px]"
         >
           <source src="https://d1j51sstdvqdsm.cloudfront.net/m5gssv%2Ffile%2F3d9086511e7ac238590f23565e9bb2db_ec5a3a99952703ab7060ba0efa91300b.mp4?response-content-disposition=inline%3Bfilename%3D%223d9086511e7ac238590f23565e9bb2db_ec5a3a99952703ab7060ba0efa91300b.mp4%22%3B&response-content-type=video%2Fmp4&Expires=1751665151&Signature=A1A626L8YSbtZdZcq7z-ckw2NjvIAiizGkJ3g-6Xtt5WHgLVsqEcqQGDc8efFxDYvTDGFc9GtebXn8INhUdRjTzGtaZiYQf7iK1EXOo1f02Ybb8aCskjNqA3Myrkl-MfK~nOwXdv-NQbfAVK0K1s8sxoCes~MA8i8vZg46Y2p3uJMSF2XuoF5efKE8MO-4v-t3CJmSOHyIjHp9klQ3mv6nxP~2QxBHH1iF5O~3TqCvXiZze3cNYLWT48-t42O21D8ing6KjiI5KWjYyv9kaxlOj8YR792YIBerpQb7QfB43O74cKJ5LF-MO5LMZmvD1uswDEyzKPduWJpLIX5D1K8w__&Key-Pair-Id=APKAJT5WQLLEOADKLHBQ" type="video/mp4" />
           Your browser does not support the video tag.
