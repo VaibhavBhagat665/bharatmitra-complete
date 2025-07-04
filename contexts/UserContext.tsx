@@ -11,11 +11,28 @@ interface UserContextType {
   loading: boolean;
   authError: string | null;
   logout: () => Promise<void>;
-  addTokens: (amount: number) => Promise<void>; // Added this missing function
+  addTokens: (amount: number) => Promise<void>;
   rewardTokens: (amount: number, reason: string) => Promise<void>;
   redeemPerk: (perkId: string, price: number) => Promise<boolean>;
   addSchemeToHistory: (schemeId: string, schemeName: string) => Promise<void>;
-  updateUserProfile: (data: { username: string; birthday: string; occupation: string }) => Promise<void>;
+  updateUserProfile: (data: {
+    username: string;
+    birthday: string;
+    occupation: string;
+    phoneNumber: string;
+    address: string;
+    state: string;
+    district: string;
+    pincode: string;
+    category: string;
+    annualIncome: string;
+    educationLevel: string;
+    familySize: string;
+    aadhaarNumber: string;
+    panNumber: string;
+    hasRationCard: boolean;
+    gender: string;
+  }) => Promise<void>;
   refreshUserData: () => Promise<void>;
   language: 'en' | 'hi';
   setLanguage: React.Dispatch<React.SetStateAction<'en' | 'hi'>>;
@@ -34,7 +51,7 @@ export const UserContext = createContext<UserContextType>({
   loading: true,
   authError: null,
   logout: async () => {},
-  addTokens: async () => {}, // Added default implementation
+  addTokens: async () => {},
   rewardTokens: async () => {},
   redeemPerk: async () => false,
   addSchemeToHistory: async () => {},
@@ -63,6 +80,25 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   
   const { isPlaying, isPaused, activeMessageId, togglePlayPause, cancel } = useTextToSpeech();
 
+  // Get user's preferred language from localStorage or browser
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem('preferredLanguage') as 'en' | 'hi';
+    if (savedLanguage) {
+      setLanguage(savedLanguage);
+    } else {
+      // Auto-detect from browser or default to English
+      const browserLang = navigator.language.toLowerCase();
+      if (browserLang.includes('hi') || browserLang.includes('in')) {
+        setLanguage('hi');
+      }
+    }
+  }, []);
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
   const fetchUserData = async (uid: string): Promise<UserProfile | null> => {
     try {
       const userRef = doc(db, 'users', uid);
@@ -76,9 +112,22 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           email: data.email,
           birthday: data.birthday,
           occupation: data.occupation,
+          phoneNumber: data.phoneNumber,
+          address: data.address,
+          state: data.state,
+          district: data.district,
+          pincode: data.pincode,
+          category: data.category,
+          annualIncome: data.annualIncome,
+          educationLevel: data.educationLevel,
+          familySize: data.familySize,
+          aadhaarNumber: data.aadhaarNumber,
+          panNumber: data.panNumber,
+          hasRationCard: data.hasRationCard || false,
+          gender: data.gender,
           joined_at: data.joined_at,
           auth_provider: data.auth_provider,
-          bharat_tokens: data.bharat_tokens || 0, // Default to 0 if not set
+          bharat_tokens: data.bharat_tokens || 0,
           scheme_history: data.scheme_history || [],
         };
       }
@@ -202,7 +251,24 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   };
 
-  const updateUserProfile = async (data: { username: string; birthday: string; occupation: string }) => {
+  const updateUserProfile = async (data: {
+    username: string;
+    birthday: string;
+    occupation: string;
+    phoneNumber: string;
+    address: string;
+    state: string;
+    district: string;
+    pincode: string;
+    category: string;
+    annualIncome: string;
+    educationLevel: string;
+    familySize: string;
+    aadhaarNumber: string;
+    panNumber: string;
+    hasRationCard: boolean;
+    gender: string;
+  }) => {
     if (!user || !userData) {
       throw new Error('User not authenticated');
     }
@@ -213,6 +279,20 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         username: data.username,
         birthday: data.birthday,
         occupation: data.occupation,
+        phoneNumber: data.phoneNumber,
+        address: data.address,
+        state: data.state,
+        district: data.district,
+        pincode: data.pincode,
+        category: data.category,
+        annualIncome: data.annualIncome,
+        educationLevel: data.educationLevel,
+        familySize: data.familySize,
+        aadhaarNumber: data.aadhaarNumber,
+        panNumber: data.panNumber,
+        hasRationCard: data.hasRationCard,
+        gender: data.gender,
+        lastUpdated: serverTimestamp(),
       });
 
       setUserData(prev => prev ? { ...prev, ...data } : null);
@@ -350,7 +430,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     logout,
     updateUserProfile,
     addSchemeToHistory,
-    addTokens, // Added this to the return value
+    addTokens,
     rewardTokens,
     redeemPerk,
     refreshUserData,
