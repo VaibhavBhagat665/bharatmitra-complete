@@ -217,7 +217,7 @@ const AccountPage: React.FC = () => {
   });
   const [notification, setNotification] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showKycModal, setShowKycModal] = useState(false);
+  // const [showKycModal, setShowKycModal] = useState(false);
 
   const t = translations[language];
 
@@ -335,42 +335,42 @@ const AccountPage: React.FC = () => {
     }
   };
 
-  const handleKycVerification = async () => {
-    // Simulated KYC verification process
-    setLoading(true);
-    try {
-      // In real implementation, this would call actual KYC API
-      await new Promise(resolve => setTimeout(resolve, 2000));
+  // const handleKycVerification = async () => {
+  //   // Simulated KYC verification process
+  //   setLoading(true);
+  //   try {
+  //     // In real implementation, this would call actual KYC API
+  //     await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const updatedFormData = { ...formData, kycStatus: 'verified' };
-      await updateUserProfile(updatedFormData);
+  //     const updatedFormData = { ...formData, kycStatus: 'verified' };
+  //     await updateUserProfile(updatedFormData);
       
-      setNotification('KYC verification successful!');
-      setShowKycModal(false);
-      setTimeout(() => setNotification(''), 3000);
-    } catch (error) {
-      setNotification('KYC verification failed. Please try again.');
-      setTimeout(() => setNotification(''), 3000);
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     setNotification('KYC verification successful!');
+  //     setShowKycModal(false);
+  //     setTimeout(() => setNotification(''), 3000);
+  //   } catch (error) {
+  //     setNotification('KYC verification failed. Please try again.');
+  //     setTimeout(() => setNotification(''), 3000);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
-  const getKycStatusColor = (status: string) => {
-    switch (status) {
-      case 'verified': return 'text-green-600 bg-green-100';
-      case 'failed': return 'text-red-600 bg-red-100';
-      default: return 'text-yellow-600 bg-yellow-100';
-    }
-  };
+  // const getKycStatusColor = (status: string) => {
+  //   switch (status) {
+  //     case 'verified': return 'text-green-600 bg-green-100';
+  //     case 'failed': return 'text-red-600 bg-red-100';
+  //     default: return 'text-yellow-600 bg-yellow-100';
+  //   }
+  // };
 
-  const getKycStatusText = (status: string) => {
-    switch (status) {
-      case 'verified': return t.kycVerified;
-      case 'failed': return t.kycFailed;
-      default: return t.kycPending;
-    }
-  };
+  // const getKycStatusText = (status: string) => {
+  //   switch (status) {
+  //     case 'verified': return t.kycVerified;
+  //     case 'failed': return t.kycFailed;
+  //     default: return t.kycPending;
+  //   }
+  // };
 
   if (!userData) {
     return (
@@ -678,7 +678,7 @@ const AccountPage: React.FC = () => {
           </div>
 
           {/* Identity & KYC Information Section */}
-          <div className="mb-8">
+{/*           <div className="mb-8">
             <h3 className="text-lg font-semibold text-bharat-blue-800 mb-4 border-b pb-2">{t.identityInfo}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -771,7 +771,7 @@ const AccountPage: React.FC = () => {
               <p className="text-sm text-blue-700">{t.kycNote}</p>
             </div>
           </div>
-
+ */}
           {isEditing && (
             <div className="flex justify-end gap-4 mt-6">
               <button 
@@ -865,35 +865,35 @@ const AccountPage: React.FC = () => {
       </div>
 
       {/* KYC Modal */}
-      {showKycModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-bharat-blue-900 mb-4">KYC Verification</h3>
-            <p className="text-gray-600 mb-4">
-              {language === 'en' 
-                ? 'We will verify your Aadhaar details for KYC compliance. This is a secure process and your data will be encrypted.'
-                : 'हम केवाईसी अनुपालन के लिए आपके आधार विवरण की जांच करेंगे। यह एक सुरक्षित प्रक्रिया है और आपका डेटा एन्क्रिप्टेड होगा।'
-              }
-            </p>
-            <div className="flex justify-end gap-3">
-              <button 
-                onClick={() => setShowKycModal(false)}
-                disabled={loading}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 disabled:opacity-50"
-              >
-                {t.cancel}
-              </button>
-              <button 
-                onClick={handleKycVerification}
-                disabled={loading}
-                className="px-4 py-2 bg-bharat-blue-700 text-white rounded-md hover:bg-bharat-blue-800 disabled:opacity-50"
-              >
-                {loading ? (language === 'en' ? 'Verifying...' : 'सत्यापित हो रहा है...') : t.verifyKyc}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+{/*       {showKycModal && ( */}
+      //   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      //     <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+      //       <h3 className="text-lg font-semibold text-bharat-blue-900 mb-4">KYC Verification</h3>
+      //       <p className="text-gray-600 mb-4">
+      //         {language === 'en' 
+      //           ? 'We will verify your Aadhaar details for KYC compliance. This is a secure process and your data will be encrypted.'
+      //           : 'हम केवाईसी अनुपालन के लिए आपके आधार विवरण की जांच करेंगे। यह एक सुरक्षित प्रक्रिया है और आपका डेटा एन्क्रिप्टेड होगा।'
+      //         }
+      //       </p>
+      //       <div className="flex justify-end gap-3">
+      //         <button 
+      //           onClick={() => setShowKycModal(false)}
+      //           disabled={loading}
+      //           className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 disabled:opacity-50"
+      //         >
+      //           {t.cancel}
+      //         </button>
+      //         <button 
+      //           onClick={handleKycVerification}
+      //           disabled={loading}
+      //           className="px-4 py-2 bg-bharat-blue-700 text-white rounded-md hover:bg-bharat-blue-800 disabled:opacity-50"
+      //         >
+      //           {loading ? (language === 'en' ? 'Verifying...' : 'सत्यापित हो रहा है...') : t.verifyKyc}
+      //         </button>
+      //       </div>
+      //     </div>
+      //   </div>
+      // )}
     </div>
   );
 };
