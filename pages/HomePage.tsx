@@ -1,87 +1,84 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  GraduationCap, 
-  Wheat, 
-  Home, 
-  MessageCircle, 
-  Search, 
-  Globe, 
-  BookOpen, 
-  Monitor, 
-  Shield, 
-  HelpCircle,
-  ExternalLink,
-  ArrowRight,
-  Users,
-  Award,
-  Heart,
-  Zap,
-  CheckCircle,
-  Info
-} from 'lucide-react';
-
-// Mock AshokaChakraIcon component
-const AshokaChakraIcon = ({ className }: { className?: string }) => (
-  <div className={`${className} rounded-full border-4 border-current flex items-center justify-center`}>
-    <div className="w-2 h-2 bg-current rounded-full"></div>
-  </div>
-);
-
-// Mock useUser hook
-const useUser = () => ({
-  language: 'en' as 'en' | 'hi'
-});
+import { AshokaChakraIcon } from '../components/icons/AshokaChakraIcon';
+import { useUser } from '../contexts/UserContext';
 
 const testimonials = {
-  en: [],
-  hi: []
+  en: [
+    // {
+    //   name: 'Anjali, B.Tech Student',
+    //   message: 'Bharat Mitra helped me find a scholarship I never knew existed. It made a real difference!',
+    // },
+    // {
+    //   name: 'Rajeev, Farmer from MP',
+    //   message: 'I got info on PM-KISAN easily. The chatbot spoke in Hindi and made it simple!',
+    // },
+    // {
+    //   name: 'Meena, Homemaker',
+    //   message: 'I found health schemes for my family with just one question. Great work!',
+    // },
+  ],
+  hi: [
+    // {
+    //   name: 'अंजलि, बी.टेक छात्रा',
+    //   message: 'भारत मित्र ने मुझे एक ऐसी छात्रवृत्ति दिलाई जिसके बारे में मैं जानती ही नहीं थी। इसने वास्तव में फर्क डाला!',
+    // },
+    // {
+    //   name: 'राजीव, मध्य प्रदेश के किसान',
+    //   message: 'मुझे PM-KISAN की जानकारी आसानी से मिली। चैटबॉट हिंदी में बात करता है और सब कुछ सरल बनाता है!',
+    // },
+    // {
+    //   name: 'मीना, गृहिणी',
+    //   message: 'मैंने अपने परिवार के लिए स्वास्थ्य योजनाएं सिर्फ एक सवाल से पा लीं। बहुत बढ़िया काम!',
+    // },
+  ]
 };
 
 const content = {
   en: {
     title: 'Welcome to Bharat Mitra',
-    subtitle: 'Your trusted AI assistant for navigating Indian government schemes. Ask in English/Hindi and get clear answers about scholarships, farmer support, and citizen benefits.',
+    subtitle: 'Your trusted AI assistant for navigating Indian government schemes. Ask in your English/Hindi and get clear answers about scholarships, farmer support, and citizen benefits.',
     startChatButton: 'Start Asking Questions',
     benefitsButton: 'View Recommended Benefits',
-    studentsTitle: 'For Students',
+    studentsTitle: '🎓 For Students',
     studentsDesc: 'Find scholarships, educational loans, and skill development programs tailored for you.',
-    farmersTitle: 'For Farmers',
+    farmersTitle: '🌾 For Farmers',
     farmersDesc: 'Get crop insurance, subsidies for equipment, and income support schemes like PM-KISAN.',
-    citizensTitle: 'For All Citizens',
+    citizensTitle: '🏠 For All Citizens',
     citizensDesc: 'Learn about Ayushman Bharat, housing schemes, and social welfare benefits for everyone.',
-    knowledgeHubTitle: 'Bharat Knowledge Hub',
-    faqTitle: 'Frequently Asked Questions',
+    // testimonialsTitle: '✨ What People Are Saying',
+    knowledgeHubTitle: '📚 Bharat Knowledge Hub',
+    faqTitle: '🤔 Frequently Asked Questions',
     faqData: [
       {
-        icon: MessageCircle,
+        icon: '💬',
         title: 'Is this chatbot free?',
-        answer: 'Yes! Bharat Mitra is free for everyone and helps you access real schemes.',
+        answer: '🤖 Yes! Bharat Mitra is free for everyone and helps you access real schemes.',
       },
       {
-        icon: Search,
+        icon: '🔍',
         title: 'How accurate is the advice?',
-        answer: 'We use trusted government APIs & datasets to answer your questions.',
+        answer: '💬 We use trusted government APIs & datasets to answer your questions.',
       },
       {
-        icon: Globe,
+        icon: '🇮🇳',
         title: 'Can I ask in Hindi?',
-        answer: 'Absolutely! Speak or type in Hindi, and the chatbot will respond in Hindi.',
+        answer: '✅ Absolutely! Speak or type in Hindi, and the chatbot will respond in Hindi.',
       },
       {
-        icon: BookOpen,
+        icon: '📚',
         title: 'What kind of schemes can I ask about?',
-        answer: 'You can ask about education, farming, health, housing, employment and more.',
+        answer: '🎯 You can ask about education, farming, health, housing, employment and more.',
       },
       {
-        icon: Monitor,
+        icon: '🖥️',
         title: 'Do I need to install any app?',
-        answer: 'No installation needed — just open the website and start chatting!',
+        answer: '🌐 No installation needed — just open the website and start chatting!',
       },
       {
-        icon: Shield,
+        icon: '🔒',
         title: 'Is my data safe?',
-        answer: "Absolutely. We don't collect any personal data or store your queries.",
+        answer: "🛡️ Absolutely. We don't collect any personal data or store your queries.",
       },
     ],
     schemeData: [
@@ -108,44 +105,45 @@ const content = {
     subtitle: 'भारतीय सरकारी योजनाओं के लिए आपका विश्वसनीय AI सहायक। हिंदी/अंग्रेजी में पूछें और छात्रवृत्ति, किसान सहायता और नागरिक लाभों के बारे में स्पष्ट उत्तर पाएं।',
     startChatButton: 'सवाल पूछना शुरू करें',
     benefitsButton: 'सुझाई गई योजनाएं देखें',
-    studentsTitle: 'छात्रों के लिए',
+    studentsTitle: '🎓 छात्रों के लिए',
     studentsDesc: 'आपके लिए उपयुक्त छात्रवृत्ति, शैक्षणिक ऋण और कौशल विकास कार्यक्रम खोजें।',
-    farmersTitle: 'किसानों के लिए',
+    farmersTitle: '🌾 किसानों के लिए',
     farmersDesc: 'फसल बीमा, उपकरण सब्सिडी और PM-KISAN जैसी आय सहायता योजनाएं प्राप्त करें।',
-    citizensTitle: 'सभी नागरिकों के लिए',
+    citizensTitle: '🏠 सभी नागरिकों के लिए',
     citizensDesc: 'आयुष्मान भारत, आवास योजनाओं और सभी के लिए सामाजिक कल्याण लाभों के बारे में जानें।',
-    knowledgeHubTitle: 'भारत ज्ञान केंद्र',
-    faqTitle: 'अक्सर पूछे जाने वाले प्रश्न',
+    // testimonialsTitle: '✨ लोग क्या कह रहे हैं',
+    knowledgeHubTitle: '📚 भारत ज्ञान केंद्र',
+    faqTitle: '🤔 अक्सर पूछे जाने वाले प्रश्न',
     faqData: [
       {
-        icon: MessageCircle,
+        icon: '💬',
         title: 'क्या यह चैटबॉट मुफ्त है?',
-        answer: 'हां! भारत मित्र सभी के लिए मुफ्त है और आपको वास्तविक योजनाओं तक पहुंचने में मदद करता है।',
+        answer: '🤖 हां! भारत मित्र सभी के लिए मुफ्त है और आपको वास्तविक योजनाओं तक पहुंचने में मदद करता है।',
       },
       {
-        icon: Search,
+        icon: '🔍',
         title: 'सलाह कितनी सटीक है?',
-        answer: 'हम आपके सवालों का जवाब देने के लिए विश्वसनीय सरकारी APIs और डेटासेट का उपयोग करते हैं।',
+        answer: '💬 हम आपके सवालों का जवाब देने के लिए विश्वसनीय सरकारी APIs और डेटासेट का उपयोग करते हैं।',
       },
       {
-        icon: Globe,
+        icon: '🇮🇳',
         title: 'क्या मैं हिंदी में पूछ सकता हूं?',
-        answer: 'बिल्कुल! हिंदी में बोलें या टाइप करें, और चैटबॉट हिंदी में जवाब देगा।',
+        answer: '✅ बिल्कुल! हिंदी में बोलें या टाइप करें, और चैटबॉट हिंदी में जवाब देगा।',
       },
       {
-        icon: BookOpen,
+        icon: '📚',
         title: 'मैं किस प्रकार की योजनाओं के बारे में पूछ सकता हूं?',
-        answer: 'आप शिक्षा, कृषि, स्वास्थ्य, आवास, रोजगार और अधिक के बारे में पूछ सकते हैं।',
+        answer: '🎯 आप शिक्षा, कृषि, स्वास्थ्य, आवास, रोजगार और अधिक के बारे में पूछ सकते हैं।',
       },
       {
-        icon: Monitor,
+        icon: '🖥️',
         title: 'क्या मुझे कोई ऐप इंस्टॉल करना होगा?',
-        answer: 'कोई इंस्टॉलेशन की आवश्यकता नहीं — बस वेबसाइट खोलें और चैट करना शुरू करें!',
+        answer: '🌐 कोई इंस्टॉलेशन की आवश्यकता नहीं — बस वेबसाइट खोलें और चैट करना शुरू करें!',
       },
       {
-        icon: Shield,
+        icon: '🔒',
         title: 'क्या मेरा डेटा सुरक्षित है?',
-        answer: "बिल्कुल। हम कोई व्यक्तिगत डेटा एकत्र नहीं करते या आपकी क्वेरी स्टोर नहीं करते।",
+        answer: "🛡️ बिल्कुल। हम कोई व्यक्तिगत डेटा एकत्र नहीं करते या आपकी क्वेरी स्टोर नहीं करते।",
       },
     ],
     schemeData: [
@@ -196,208 +194,150 @@ const HomePage: React.FC = () => {
     'https://www.pmindia.gov.in/hi/government_tr_rec/%E0%A4%AC%E0%A5%87%E0%A4%9F%E0%A5%80-%E0%A4%AC%E0%A4%9A%E0%A4%BE%E0%A4%93-%E0%A4%AC%E0%A5%87%E0%A4%9F%E0%A5%80-%E0%A4%AA%E0%A4%A2%E0%A4%BC%E0%A4%BE%E0%A4%93-%E0%A4%AC%E0%A4%BE%E0%A4%B2/',
   ];
 
-  const featureCards = [
-    {
-      icon: GraduationCap,
-      title: currentContent.studentsTitle,
-      description: currentContent.studentsDesc,
-      color: 'blue',
-      gradient: 'from-blue-500 to-indigo-600'
-    },
-    {
-      icon: Wheat,
-      title: currentContent.farmersTitle,
-      description: currentContent.farmersDesc,
-      color: 'green',
-      gradient: 'from-green-500 to-emerald-600'
-    },
-    {
-      icon: Home,
-      title: currentContent.citizensTitle,
-      description: currentContent.citizensDesc,
-      color: 'orange',
-      gradient: 'from-orange-500 to-red-600'
-    },
-  ];
-
-  const stats = [
-    { icon: Users, number: '10M+', label: 'Citizens Helped' },
-    { icon: Award, number: '500+', label: 'Government Schemes' },
-    { icon: Heart, number: '99%', label: 'Satisfaction Rate' },
-    { icon: Zap, number: '24/7', label: 'Always Available' }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800"></div>
-        <div className="absolute inset-0 bg-black/20"></div>
-        
-        <div className="relative z-10 px-6 py-20 text-center text-white">
-          {/* Ashoka Chakra */}
-          <div className="flex justify-center items-center mb-8">
-            <AshokaChakraIcon className="h-24 w-24 text-white animate-spin-slow" />
-          </div>
+    <>
+      {/* 🔹 Background Video Section */}
+      <div className="relative min-h-screen backdrop-blur-md overflow-hidden text-center text-white">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute top-0 left-0 w-full h-full object-cover"
+        >
+          <source src="https://videos.pexels.com/video-files/30113222/12915429_1920_1080_25fps.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
 
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+        <div className="relative z-10 px-6 py-12 backdrop-blur-sm bg-black/20 min-h-screen flex flex-col justify-center">
+        {/* Ashoka Chakra */}
+        <div className="flex justify-center items-center mb-6 animate-fade-in">
+          <AshokaChakraIcon className="h-20 w-20 text-white rotate-slow" />
+        </div>
+
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 drop-shadow-md animate-fade-in-up">
             {currentContent.title}
           </h1>
 
-          <p className="text-xl md:text-2xl max-w-4xl mx-auto mb-12 text-blue-100 leading-relaxed">
+          <p className="text-lg md:text-xl max-w-3xl mx-auto mb-8 animate-fade-in-up delay-200">
             {currentContent.subtitle}
           </p>
 
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-6 mb-16">
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-12 animate-fade-in-up delay-300">
             <Link
               to="/chat"
-              className="group bg-white text-blue-700 font-bold py-4 px-8 rounded-full text-lg hover:bg-blue-50 transform hover:scale-105 transition-all duration-300 shadow-xl flex items-center gap-3"
+              className="bg-bharat-blue-700 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-bharat-blue-800 transform hover:scale-105 transition-all shadow-lg"
             >
-              <MessageCircle className="h-5 w-5" />
               {currentContent.startChatButton}
-              <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
               to="/benefits"
-              className="group bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold py-4 px-8 rounded-full text-lg hover:from-orange-600 hover:to-red-700 transform hover:scale-105 transition-all duration-300 shadow-xl flex items-center gap-3"
+              className="bg-bharat-saffron-500 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-bharat-saffron-600 transform hover:scale-105 transition-all shadow-lg"
             >
-              <Search className="h-5 w-5" />
               {currentContent.benefitsButton}
-              <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
 
-          {/* Stats Section */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto mb-12">
-            {stats.map((stat, idx) => (
-              <div key={idx} className="text-center">
-                <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 hover:bg-white/30 transition-all duration-300">
-                  <stat.icon className="h-8 w-8 mx-auto mb-3 text-blue-200" />
-                  <div className="text-3xl font-bold text-white mb-1">{stat.number}</div>
-                  <div className="text-sm text-blue-200">{stat.label}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Feature Cards */}
-      <div className="px-6 py-20">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">How We Help</h2>
-            <p className="text-xl text-gray-600">Tailored solutions for every citizen</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {featureCards.map((card, idx) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left animate-fade-in-up delay-500 mb-16 text-black">
+            {[
+              {
+                title: currentContent.studentsTitle,
+                description: currentContent.studentsDesc,
+                border: 'border-bharat-blue-500',
+              },
+              {
+                title: currentContent.farmersTitle,
+                description: currentContent.farmersDesc,
+                border: 'border-bharat-green-500',
+              },
+              {
+                title: currentContent.citizensTitle,
+                description: currentContent.citizensDesc,
+                border: 'border-bharat-saffron-500',
+              },
+            ].map((info, idx) => (
               <div
                 key={idx}
-                className="group relative overflow-hidden rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
+                className={`bg-white/90 p-6 rounded-2xl shadow-xl border-t-4 ${info.border}`}
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-90`}></div>
-                <div className="relative z-10 p-8 text-white">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 w-fit mb-6">
-                    <card.icon className="h-8 w-8" />
-                  </div>
-                  <h3 className="text-2xl font-bold mb-4">{card.title}</h3>
-                  <p className="text-lg opacity-90 leading-relaxed">{card.description}</p>
-                </div>
+                <h3 className="text-xl font-bold text-bharat-blue-900 mb-2">{info.title}</h3>
+                <p className="text-gray-700">{info.description}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Knowledge Hub */}
-      <div className="bg-white py-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4 flex items-center justify-center gap-3">
-              <BookOpen className="h-10 w-10 text-blue-600" />
-              {currentContent.knowledgeHubTitle}
-            </h2>
-            <p className="text-xl text-gray-600">Explore popular government schemes</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {currentContent.schemeData.map((scheme, idx) => (
-              <a
+      {/* 🔸 Remaining Page Section (Testimonial + Marquee + FAQ) */}
+      <div className="bg-red-50 px-6 py-16">
+        {/* ✨ Testimonials */}
+{/*         <div className="bg-white bg-opacity-90 p-8 rounded-xl shadow-lg max-w-3xl mx-auto animate-fade-in-up delay-700">
+          <h2 className="text-2xl font-bold text-red-700 mb-6">{currentContent.testimonialsTitle}</h2>
+          <div className="relative h-32 overflow-hidden">
+            {currentTestimonials.map((t, idx) => (
+              <div
                 key={idx}
-                href={schemeLinks[idx]}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-blue-200"
+                className={`absolute inset-0 transition-all duration-700 ease-in-out transform ${
+                  idx === currentIndex
+                    ? 'opacity-100 translate-x-0 scale-100'
+                    : 'opacity-0 translate-x-full scale-95'
+                }`}
               >
-                <div className="aspect-video overflow-hidden">
-                  <img 
-                    src={schemeImages[idx]} 
-                    alt={scheme.title} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                  />
+                <div className="bg-bharat-blue-50 border-l-4 border-bharat-saffron-600 text-left p-6 rounded shadow-md h-full flex flex-col justify-center">
+                  <p className="text-lg text-gray-800 italic mb-2">"{t.message}"</p>
+                  <p className="text-sm text-gray-600 font-semibold">- {t.name}</p>
                 </div>
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                      {scheme.title}
-                    </h3>
-                    <ExternalLink className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors flex-shrink-0" />
-                  </div>
-                  <p className="text-gray-600 text-sm leading-relaxed">{scheme.description}</p>
-                </div>
-              </a>
+              </div>
             ))}
           </div>
-        </div>
-      </div>
+        </div> */}
 
-      {/* FAQ Section */}
-      <div className="bg-gray-50 py-20">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4 flex items-center justify-center gap-3">
-              <HelpCircle className="h-10 w-10 text-blue-600" />
-              {currentContent.faqTitle}
-            </h2>
-            <p className="text-xl text-gray-600">Get answers to common questions</p>
+        {/* 🌐 Bharat Knowledge Hub */}
+        <div className="mt-24">
+          <h2 className="text-3xl font-extrabold text-bharat-blue-900 mb-8 text-center flex items-center justify-center gap-2">
+            {currentContent.knowledgeHubTitle} <span className="text-xl">🔍📖🧠</span>
+          </h2>
+          <div className="marquee-container">
+            <div className="marquee-track gap-6 px-6">
+              {currentContent.schemeData.map((entry, idx) => (
+                <a
+                  key={idx}
+                  href={schemeLinks[idx]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative min-w-[280px] max-w-xs rounded-xl overflow-hidden shadow-md grayscale hover:grayscale-0 transform hover:scale-105 transition-all duration-300 group bg-white"
+                >
+                  <img src={schemeImages[idx]} alt={entry.title} className="w-full h-40 object-cover" />
+                  <div className="p-4 flex flex-col justify-between h-40">
+                    <h3 className="text-lg md:text-xl font-bold text-bharat-blue-900">{entry.title}</h3>
+                    <p className="text-sm text-gray-600 mt-2">{entry.description}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* ❓ FAQ Section */}
+        <div className="mt-24 max-w-6xl mx-auto px-4">
+          <h3 className="text-3xl font-bold text-red-700 mb-8 flex items-center gap-2">
+            {currentContent.faqTitle} <span className="animate-ping text-lg">❓</span>
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {currentContent.faqData.map((faq, idx) => (
               <div
                 key={idx}
-                className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-blue-200 group"
+                className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 group hover:brightness-105 hover:shadow-red-200 transition-all duration-500"
               >
-                <div className="bg-blue-50 rounded-2xl p-4 w-fit mb-6 group-hover:bg-blue-100 transition-colors">
-                  <faq.icon className="h-8 w-8 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">{faq.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{faq.answer}</p>
+                <div className="text-3xl mb-2">{faq.icon}</div>
+                <h4 className="font-semibold text-bharat-blue-900 text-lg">{faq.title}</h4>
+                <p className="text-gray-600 text-sm mt-1">{faq.answer}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
-
-      {/* CTA Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-700 py-20">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">Ready to Get Started?</h2>
-          <p className="text-xl text-blue-100 mb-8 leading-relaxed">
-            Join millions of Indians who trust Bharat Mitra for government scheme guidance
-          </p>
-          <Link
-            to="/chat"
-            className="group inline-flex items-center gap-3 bg-white text-blue-700 font-bold py-4 px-8 rounded-full text-lg hover:bg-blue-50 transform hover:scale-105 transition-all duration-300 shadow-xl"
-          >
-            <MessageCircle className="h-6 w-6" />
-            Start Your Journey
-            <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
-      </div>
-    </div>
+    </>
   );
 };
 
