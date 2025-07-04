@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   GraduationCap, 
   Wheat, 
@@ -248,22 +249,22 @@ const HomePage: React.FC = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center items-center gap-6 mb-16">
-            <button
-              onClick={() => window.location.href = '/chat'}
+            <Link
+              to="/chat"
               className="group bg-white text-blue-700 font-bold py-4 px-8 rounded-full text-lg hover:bg-blue-50 transform hover:scale-105 transition-all duration-300 shadow-xl flex items-center gap-3"
             >
               <MessageCircle className="h-5 w-5" />
               {currentContent.startChatButton}
               <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </button>
-            <button
-              onClick={() => window.location.href = '/benefits'}
+            </Link>
+            <Link
+              to="/benefits"
               className="group bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold py-4 px-8 rounded-full text-lg hover:from-orange-600 hover:to-red-700 transform hover:scale-105 transition-all duration-300 shadow-xl flex items-center gap-3"
             >
               <Search className="h-5 w-5" />
               {currentContent.benefitsButton}
               <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </button>
+            </Link>
           </div>
 
           {/* Stats Section */}
@@ -386,14 +387,14 @@ const HomePage: React.FC = () => {
           <p className="text-xl text-blue-100 mb-8 leading-relaxed">
             Join millions of Indians who trust Bharat Mitra for government scheme guidance
           </p>
-          <button
-            onClick={() => window.location.href = '/chat'}
+          <Link
+            to="/chat"
             className="group inline-flex items-center gap-3 bg-white text-blue-700 font-bold py-4 px-8 rounded-full text-lg hover:bg-blue-50 transform hover:scale-105 transition-all duration-300 shadow-xl"
           >
             <MessageCircle className="h-6 w-6" />
             Start Your Journey
             <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
-          </button>
+          </Link>
         </div>
       </div>
     </div>
