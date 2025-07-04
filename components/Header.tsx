@@ -112,10 +112,10 @@ const Header: React.FC = () => {
     <header className="bg-white/80 backdrop-blur-sm shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-20">
-          {/* Logo + Title */}
-          <div className="flex items-center space-x-3">
-            <AshokaChakraIcon className="h-10 w-10 text-bharat-blue-800 rotate-slow" />
-            <h1 className="text-xl md:text-2xl font-extrabold text-bharat-blue-900 tracking-tight">
+          {/* Logo + Title - Now responsive for mobile */}
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <AshokaChakraIcon className="h-8 w-8 sm:h-10 sm:w-10 text-bharat-blue-800 rotate-slow" />
+            <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-bharat-blue-900 tracking-tight">
               Bharat Mitra
             </h1>
           </div>
@@ -143,41 +143,41 @@ const Header: React.FC = () => {
           </nav>
 
           {/* Right Side: Language Toggle + Token Balance + Mobile Menu Button */}
-          <div className="flex items-center gap-4">
-            {/* Language Toggle */}
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Language Toggle - Responsive */}
             <div className="flex items-center bg-gray-200 rounded-full px-1 py-1 transition shadow-sm">
               {['en', 'hi'].map((lang) => (
                 <button
                   key={lang}
                   onClick={() => setLanguage(lang)}
-                  className={`px-3 py-1 text-sm font-semibold rounded-full transition-all duration-150 ${
+                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-semibold rounded-full transition-all duration-150 ${
                     language === lang
                       ? 'bg-white text-bharat-blue-800 shadow-sm'
                       : 'text-gray-600'
                   }`}
                 >
-                  {lang === 'en' ? t.english : t.hindi}
+                  {lang === 'en' ? 'EN' : 'हि'}
                 </button>
               ))}
             </div>
 
             {/* Token Display with Dropdown */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {loading ? (
-                <div className="h-10 w-24 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="h-8 w-16 sm:h-10 sm:w-24 bg-gray-200 rounded-full animate-pulse"></div>
               ) : user && userData ? (
                 <>
-                  {/* Token Display Button with Dropdown */}
+                  {/* Token Display Button with Dropdown - Responsive */}
                   <div className="relative" ref={tokenMenuRef}>
                     <button 
                       onClick={toggleTokenMenu}
-                      className="flex items-center space-x-2 bg-bharat-green-100 border border-bharat-green-200 px-4 py-2 rounded-full shadow-sm hover:bg-bharat-green-200 transition-all duration-200"
+                      className="flex items-center space-x-1 sm:space-x-2 bg-bharat-green-100 border border-bharat-green-200 px-2 sm:px-4 py-1 sm:py-2 rounded-full shadow-sm hover:bg-bharat-green-200 transition-all duration-200"
                     >
-                      <TokenIcon className="h-6 w-6 text-bharat-green-600" />
-                      <span className="font-bold text-lg text-gray-900">
+                      <TokenIcon className="h-4 w-4 sm:h-6 sm:w-6 text-bharat-green-600" />
+                      <span className="font-bold text-sm sm:text-lg text-gray-900">
                         {userData.bharat_tokens || 0}
                       </span>
-                      <ChevronDownIcon className={`h-4 w-4 text-gray-600 transition-transform duration-200 ${isTokenMenuOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDownIcon className={`h-3 w-3 sm:h-4 sm:w-4 text-gray-600 transition-transform duration-200 ${isTokenMenuOpen ? 'rotate-180' : ''}`} />
                     </button>
                     
                     {/* Token Dropdown Menu */}
@@ -234,7 +234,7 @@ const Header: React.FC = () => {
               ) : (
                 <Link 
                   to="/login" 
-                  className="bg-bharat-blue-700 text-white font-bold py-2 px-6 rounded-full text-sm hover:bg-bharat-blue-800 transition-transform transform hover:scale-105 shadow-lg"
+                  className="bg-bharat-blue-700 text-white font-bold py-1 px-3 sm:py-2 sm:px-6 rounded-full text-xs sm:text-sm hover:bg-bharat-blue-800 transition-transform transform hover:scale-105 shadow-lg"
                 >
                   {t.signIn}
                 </Link>
