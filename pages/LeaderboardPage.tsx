@@ -1,14 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '../contexts/UserContext';
 import { Trophy, Medal, Award, TrendingUp, Users, Clock, Star, Crown, Target } from 'lucide-react';
+
+// Import your actual useUser hook
+import { useUser } from '../contexts/UserContext';
 
 const LeaderboardPage: React.FC = () => {
   const { leaderboardData, user, userData, userRank, userBadge, getUserProgress } = useUser();
+
   const [timeFilter, setTimeFilter] = useState<'all' | 'week' | 'month'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'students' | 'professionals'>('all');
   const [showUserCard, setShowUserCard] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const userProgress = getUserProgress();
+
+  // Add loading state for data fetching
+  useEffect(() => {
+    if (!leaderboardData || !user) {
+      setLoading(true);
+    } else {
+      setLoading(false);
+    }
+  }, [leaderboardData, user]);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -24,6 +38,7 @@ const LeaderboardPage: React.FC = () => {
   };
 
   const getBadgeColor = (badge: string) => {
+    if (!badge) return 'bg-gradient-to-r from-gray-400 to-gray-500';
     if (badge.includes('Champion')) return 'bg-gradient-to-r from-yellow-400 to-orange-500';
     if (badge.includes('Expert')) return 'bg-gradient-to-r from-blue-400 to-purple-500';
     if (badge.includes('Scholar')) return 'bg-gradient-to-r from-green-400 to-teal-500';
@@ -39,11 +54,68 @@ const LeaderboardPage: React.FC = () => {
     return 'bg-gradient-to-r from-yellow-500 to-orange-500';
   };
 
-  const filteredLeaderboard = leaderboardData.filter(user => {
-    if (categoryFilter === 'students' && !user.occupation?.toLowerCase().includes('student')) return false;
-    if (categoryFilter === 'professionals' && user.occupation?.toLowerCase().includes('student')) return false;
+  const filteredLeaderboard = leaderboardData ? leaderboardData.filter(leaderUser => {
+    if (categoryFilter === 'students' && !leaderUser.occupation?.toLowerCase().includes('student')) return false;
+    if (categoryFilter === 'professionals' && leaderUser.occupation?.toLowerCase().includes('student')) return false;
     return true;
+  }) : [];
+
+  // Debug logging - remove in production
+  console.log('Debug Info:', {
+    leaderboardData: leaderboardData || 'null/undefined',
+    user: user || 'null/undefined',
+    userData: userData || 'null/undefined',
+    userRank,
+    userBadge,
+    filteredCount: filteredLeaderboard.length
   });
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading leaderboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="text-center">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <h2 className="text-xl font-bold text-red-800 mb-2">Error Loading Leaderboard</h2>
+            <p className="text-red-600 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (!leaderboardData || leaderboardData.length === 0) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="text-center">
+          <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">No Data Available</h2>
+          <p className="text-gray-600">The leaderboard is empty. Be the first to start earning tokens!</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -71,7 +143,7 @@ const LeaderboardPage: React.FC = () => {
             <h2 className="text-xl font-bold text-gray-900">Your Progress</h2>
             <button
               onClick={() => setShowUserCard(false)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 hover:text-gray-600 text-xl"
             >
               ✕
             </button>
@@ -258,7 +330,7 @@ const LeaderboardPage: React.FC = () => {
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-white ${
                         getBadgeColor(leaderUser.badge || '')
                       }`}>
-                        {leaderUser.badge}
+                        {leaderUser.badge || 'New Explorer'}
                       </span>
                     </div>
 
@@ -362,14 +434,14 @@ const LeaderboardPage: React.FC = () => {
         <p className="mb-4">
           Explore more government schemes, help others, and earn tokens to reach the top!
         </p>
-        <div className="flex justify-center gap-4 text-sm">
-          <div className="bg-white/20 rounded-full px-4 py-2">
+        <div className="flex justify-center gap-4 text-sm flex-wrap">
+          <div className="bg-white/20 rounded-full px-4 py-2 mb-2">
             <span className="font-medium">💰 Rare schemes = More tokens</span>
           </div>
-          <div className="bg-white/20 rounded-full px-4 py-2">
+          <div className="bg-white/20 rounded-full px-4 py-2 mb-2">
             <span className="font-medium">🎯 Daily login streaks = Bonus rewards</span>
           </div>
-          <div className="bg-white/20 rounded-full px-4 py-2">
+          <div className="bg-white/20 rounded-full px-4 py-2 mb-2">
             <span className="font-medium">🌟 Weekend activities = Extra multipliers</span>
           </div>
         </div>
