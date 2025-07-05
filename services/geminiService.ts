@@ -249,36 +249,106 @@ export const getSchemeAdvice = async (query: string, lang: 'en' | 'hi'): Promise
       return getFallbackResponse(lang);
     }
     
-    const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: [{
-        role: 'user',
-        parts: [{ text: query }]
-      }],
-      generationConfig: {
-        temperature: 0.3,
-        topP: 0.8,
-        topK: 40,
-        maxOutputTokens: 1000,
-      },
-      systemInstruction: getSystemInstruction(lang, relevantSchemes, isUnclear)
-    });
-    
-    const responseText = response.response.text();
-    
-    // Clean up any markdown formatting that might slip through
-    const cleanedResponse = responseText
-      .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove bold
-      .replace(/\*(.*?)\*/g, '$1')      // Remove italics
-      .replace(/__(.*?)__/g, '$1')      // Remove underline
-      .replace(/`(.*?)`/g, '$1')        // Remove code formatting
-      .replace(/#{1,6}\s/g, '')         // Remove headers
-      .trim();
-    
-    return cleanedResponse;
+    // Try the newer API format first
+    try {
+      const model = ai.getGenerativeModel({ 
+        model: 'gemini-2.0-flash-exp',
+        systemInstruction: getSystemInstruction(lang, relevantSchemes, isUnclear)
+      });
+      
+      const response = await model.generateContent({
+        contents: [{
+          role: 'user',
+          parts: [{ text: query }]
+        }],
+        generationConfig: {
+          temperature: 0.3,
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: 1000,
+        }
+      });
+      
+      let responseText = '';
+      
+      // Handle different response formats
+      if (response.response?.text) {
+        responseText = await response.response.text();
+      } else if (response.response?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        responseText = response.response.candidates[0].content.parts[0].text;
+      } else {
+        throw new Error('Invalid response format from new API');
+      }
+      
+      // Clean up any markdown formatting
+      const cleanedResponse = responseText
+        .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove bold
+        .replace(/\*(.*?)\*/g, '$1')      // Remove italics
+        .replace(/__(.*?)__/g, '$1')      // Remove underline
+        .replace(/`(.*?)`/g, '$1')        // Remove code formatting
+        .replace(/#{1,6}\s/g, '')         // Remove headers
+        .trim();
+      
+      return cleanedResponse;
+      
+    } catch (newApiError) {
+      console.warn('New API format failed, trying legacy format:', newApiError);
+      
+      // Fallback to legacy API format
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash-exp',
+        contents: query,
+        config: {
+          systemInstruction: getSystemInstruction(lang, relevantSchemes, isUnclear),
+          temperature: 0.3,
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: 1000,
+        }
+      });
+      
+      let responseText = '';
+      if (response.text) {
+        responseText = response.text;
+      } else if (response.response?.text) {
+        responseText = response.response.text();
+      } else {
+        throw new Error('Invalid response format from legacy API');
+      }
+      
+      // Clean up any markdown formatting
+      const cleanedResponse = responseText
+        .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove bold
+        .replace(/\*(.*?)\*/g, '$1')      // Remove italics
+        .replace(/__(.*?)__/g, '$1')      // Remove underline
+        .replace(/`(.*?)`/g, '$1')        // Remove code formatting
+        .replace(/#{1,6}\s/g, '')         // Remove headers
+        .trim();
+      
+      return cleanedResponse;
+    }
     
   } catch (error) {
     console.error("Error calling Gemini API:", error);
+    
+    // More specific error handling
+    if (error.message?.includes('API key') || error.message?.includes('PERMISSION_DENIED')) {
+      return lang === 'hi'
+        ? "एपीआई कुंजी की समस्या है। कृपया व्यवस्थापक से संपर्क करें।"
+        : "API key issue. Please contact the administrator.";
+    }
+    
+    if (error.message?.includes('quota') || error.message?.includes('limit') || error.message?.includes('RESOURCE_EXHAUSTED')) {
+      return lang === 'hi'
+        ? "सेवा की सीमा पार हो गई है। कृपया कुछ देर बाद कोशिश करें।"
+        : "Service limit reached. Please try again later.";
+    }
+    
+    if (error.message?.includes('INVALID_ARGUMENT') || error.message?.includes('model')) {
+      return lang === 'hi'
+        ? "मॉडल कॉन्फ़िगरेशन में समस्या है। कृपया व्यवस्थापक से संपर्क करें।"
+        : "Model configuration issue. Please contact the administrator.";
+    }
     
     const errorMessage = lang === 'hi'
       ? "माफ़ करें, मुझे अपनी जानकारी तक पहुंचने में कुछ समस्या हो रही है। कृपया कुछ देर बाद फिर कोशिश करें।"
