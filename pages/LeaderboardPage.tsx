@@ -11,7 +11,7 @@ const LeaderboardPage: React.FC = () => {
     userBadge, 
     getUserProgress,
     refreshLeaderboard,
-    loading 
+    loading: userLoading 
   } = useUser();
   
   const [timeFilter, setTimeFilter] = useState<'all' | 'week' | 'month'>('all');
@@ -19,34 +19,44 @@ const LeaderboardPage: React.FC = () => {
   const [showUserCard, setShowUserCard] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   const userProgress = getUserProgress();
 
-  // Fetch leaderboard data on component mount
+  // Wait for user authentication and then fetch leaderboard
   useEffect(() => {
     const fetchData = async () => {
+      if (!user) return; // Don't fetch if user is not authenticated
+      
       try {
         setError(null);
         await refreshLeaderboard();
+        setInitialLoadDone(true);
       } catch (err) {
-        setError('Failed to load leaderboard data');
         console.error('Error fetching leaderboard:', err);
+        setError('Failed to load leaderboard data. Please try again.');
       }
     };
 
-    if (user && !leaderboardData.length) {
+    // Only fetch if user is authenticated and we haven't loaded yet
+    if (user && !initialLoadDone && !userLoading) {
       fetchData();
     }
-  }, [user, refreshLeaderboard]);
+  }, [user, userLoading, refreshLeaderboard, initialLoadDone]);
 
   const handleRefresh = async () => {
+    if (!user) {
+      setError('Please log in to view the leaderboard');
+      return;
+    }
+
     setIsRefreshing(true);
     try {
       setError(null);
       await refreshLeaderboard();
     } catch (err) {
-      setError('Failed to refresh leaderboard');
       console.error('Error refreshing leaderboard:', err);
+      setError('Failed to refresh leaderboard. Please try again.');
     } finally {
       setIsRefreshing(false);
     }
@@ -87,13 +97,26 @@ const LeaderboardPage: React.FC = () => {
     return true;
   });
 
-  // Loading state
-  if (loading) {
+  // Show loading state while user is loading or initial leaderboard fetch
+  if (userLoading || (!initialLoadDone && !error)) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading leaderboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show authentication required message
+  if (!user) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Required</h2>
+          <p className="text-gray-600 mb-4">Please log in to view the leaderboard</p>
         </div>
       </div>
     );
@@ -108,9 +131,10 @@ const LeaderboardPage: React.FC = () => {
           <p className="text-red-600 mb-4">{error}</p>
           <button
             onClick={handleRefresh}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+            disabled={isRefreshing}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
           >
-            Try Again
+            {isRefreshing ? 'Refreshing...' : 'Try Again'}
           </button>
         </div>
       </div>
@@ -145,7 +169,7 @@ const LeaderboardPage: React.FC = () => {
       </div>
 
       {/* User Progress Card */}
-      {showUserCard && user && userData && (
+      {showUserCard && userData && (
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-8 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">Your Progress</h2>
@@ -166,7 +190,9 @@ const LeaderboardPage: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Your Rank</p>
-                  <p className="text-2xl font-bold text-blue-600">#{userRank || 'Unranked'}</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {userRank ? `#${userRank}` : 'Unranked'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -178,7 +204,7 @@ const LeaderboardPage: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Current Tokens</p>
-                  <p className="text-2xl font-bold text-green-600">{userData.bharat_tokens}</p>
+                  <p className="text-2xl font-bold text-green-600">{userData.bharat_tokens || 0}</p>
                 </div>
               </div>
             </div>
@@ -284,15 +310,16 @@ const LeaderboardPage: React.FC = () => {
               <p className="text-gray-500">No users found in this category</p>
               <button
                 onClick={handleRefresh}
-                className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                disabled={isRefreshing}
+                className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
               >
-                Refresh Leaderboard
+                {isRefreshing ? 'Refreshing...' : 'Refresh Leaderboard'}
               </button>
             </div>
           ) : (
             filteredLeaderboard.map((leaderUser, index) => {
               const isCurrentUser = leaderUser.uid === user?.uid;
-              const userLevel = Math.floor(leaderUser.bharat_tokens / 100) + 1;
+              const userLevel = Math.floor((leaderUser.bharat_tokens || 0) / 100) + 1;
               
               return (
                 <div
@@ -364,7 +391,7 @@ const LeaderboardPage: React.FC = () => {
                       <div className="flex items-center justify-end gap-2">
                         <Star className="w-4 h-4 text-yellow-500" />
                         <span className="text-lg font-bold text-gray-900">
-                          {leaderUser.bharat_tokens?.toLocaleString() || '0'}
+                          {(leaderUser.bharat_tokens || 0).toLocaleString()}
                         </span>
                       </div>
                       {leaderUser.weeklyTokens && (
@@ -382,12 +409,12 @@ const LeaderboardPage: React.FC = () => {
                         <div 
                           className={`h-2 rounded-full ${getProgressColor(userLevel)} transition-all duration-500`}
                           style={{ 
-                            width: `${Math.min(100, (leaderUser.bharat_tokens % 100))}%` 
+                            width: `${Math.min(100, ((leaderUser.bharat_tokens || 0) % 100))}%` 
                           }}
                         />
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        {100 - (leaderUser.bharat_tokens % 100)} tokens to next level
+                        {100 - ((leaderUser.bharat_tokens || 0) % 100)} tokens to next level
                       </p>
                     </div>
                   )}
