@@ -1,6 +1,5 @@
-// PaymentVerification.tsx
 import React, { useState, useEffect } from 'react';
-import { paymentService, PaymentTransaction } from '../services/paymentService';
+import { razorpayService, PaymentTransaction } from '../services/razorpayService';
 
 interface PaymentVerificationProps {
   transaction: PaymentTransaction;
@@ -15,9 +14,10 @@ const PaymentVerification: React.FC<PaymentVerificationProps> = ({
 }) => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState<string>('');
-  const [userTxnId, setUserTxnId] = useState<string>('');
+  const [userPaymentId, setUserPaymentId] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState<number>(0);
-  const [showManualVerification, setShowManualVerification] = useState(false);
+  const [autoVerifyAttempts, setAutoVerifyAttempts] = useState<number>(0);
+  const [isAutoVerifying, setIsAutoVerifying] = useState(false);
 
   // Calculate time left for transaction
   useEffect(() => {
@@ -33,48 +33,64 @@ const PaymentVerification: React.FC<PaymentVerificationProps> = ({
     return () => clearInterval(interval);
   }, [transaction.expiresAt]);
 
+  // Auto-verify payment every 10 seconds
+  useEffect(() => {
+    if (timeLeft > 0 && autoVerifyAttempts < 18) { // Try for 3 minutes (18 attempts)
+      const autoVerifyInterval = setInterval(async () => {
+        setIsAutoVerifying(true);
+        try {
+          const result = await razorpayService.verifyPayment(transaction.id);
+          if (result.success) {
+            onVerificationSuccess(transaction);
+            return;
+          }
+        } catch (error) {
+          console.log('Auto verification attempt failed:', error);
+        } finally {
+          setIsAutoVerifying(false);
+        }
+        
+        setAutoVerifyAttempts(prev => prev + 1);
+      }, 10000); // Every 10 seconds
+
+      return () => clearInterval(autoVerifyInterval);
+    }
+  }, [timeLeft, autoVerifyAttempts, transaction.id, onVerificationSuccess]);
+
   const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  const handleAutoVerification = async () => {
+  const handleManualVerification = async () => {
     setIsVerifying(true);
     setVerificationError('');
 
     try {
-      const result = await paymentService.verifyPayment(transaction.id, userTxnId);
+      const result = await razorpayService.verifyPayment(transaction.id, userPaymentId);
       
       if (result.success) {
         onVerificationSuccess(transaction);
       } else {
-        setVerificationError(result.message);
-        // Show manual verification option after failed auto verification
-        setShowManualVerification(true);
+        setVerificationError(result.message || 'Payment verification failed');
       }
     } catch (error) {
       setVerificationError('Verification failed. Please try again.');
-      setShowManualVerification(true);
     } finally {
       setIsVerifying(false);
     }
   };
 
-  const handleManualVerification = () => {
-    if (!userTxnId.trim()) {
-      setVerificationError('Please enter your UPI transaction ID');
-      return;
-    }
+  const copyTransactionId = () => {
+    navigator.clipboard.writeText(transaction.id);
+    alert('Transaction ID copied to clipboard!');
+  };
 
-    // In a real app, this would be sent to backend for admin verification
-    // For now, we'll simulate immediate verification
-    const success = paymentService.manualVerifyPayment(transaction.id, userTxnId);
-    
-    if (success) {
-      onVerificationSuccess(transaction);
-    } else {
-      setVerificationError('Manual verification failed. Please contact support.');
+  const copyRazorpayOrderId = () => {
+    if (transaction.razorpayOrderId) {
+      navigator.clipboard.writeText(transaction.razorpayOrderId);
+      alert('Razorpay Order ID copied to clipboard!');
     }
   };
 
@@ -82,7 +98,7 @@ const PaymentVerification: React.FC<PaymentVerificationProps> = ({
     return (
       <div className="text-center">
         <div className="text-red-600 text-6xl mb-4">⏰</div>
-        <h2 className="text-2xl font-bold text-red-600 mb-4">Transaction Expired</h2>
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Payment Session Expired</h2>
         <p className="text-gray-600 mb-6">
           This payment session has expired. Please create a new payment to continue.
         </p>
@@ -107,6 +123,14 @@ const PaymentVerification: React.FC<PaymentVerificationProps> = ({
             Complete payment before timer expires
           </p>
         </div>
+        
+        {isAutoVerifying && (
+          <div className="bg-blue-100 border border-blue-300 rounded-lg p-3 mb-4">
+            <p className="text-blue-800 text-sm">
+              🔄 Auto-verifying payment with Razorpay...
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="bg-gray-50 rounded-lg p-4 mb-6">
@@ -115,21 +139,45 @@ const PaymentVerification: React.FC<PaymentVerificationProps> = ({
           <li>1. Open your UPI app and scan the QR code</li>
           <li>2. Verify the amount (₹{transaction.amount})</li>
           <li>3. Complete the payment</li>
-          <li>4. Copy your UPI transaction ID</li>
-          <li>5. Enter it below and click "Verify Payment"</li>
+          <li>4. Payment will be automatically verified by Razorpay</li>
+          <li>5. If auto-verification fails, enter your payment ID below</li>
         </ol>
       </div>
 
       <div className="space-y-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-semibold text-blue-800 mb-2">Payment Details:</h4>
+          <div className="text-sm text-blue-700 space-y-1">
+            <p>
+              Transaction ID: {transaction.id}
+              <button
+                onClick={copyTransactionId}
+                className="ml-2 text-blue-600 hover:text-blue-800 underline"
+              >
+                Copy
+              </button>
+            </p>
+            <p>
+              Razorpay Order ID: {transaction.razorpayOrderId}
+              <button
+                onClick={copyRazorpayOrderId}
+                className="ml-2 text-blue-600 hover:text-blue-800 underline"
+              >
+                Copy
+              </button>
+            </p>
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            UPI Transaction ID (Optional but recommended)
+            UPI Payment ID (Optional - for manual verification)
           </label>
           <input
             type="text"
-            value={userTxnId}
-            onChange={(e) => setUserTxnId(e.target.value)}
-            placeholder="Enter your UPI transaction ID"
+            value={userPaymentId}
+            onChange={(e) => setUserPaymentId(e.target.value)}
+            placeholder="Enter your UPI payment ID"
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <p className="text-xs text-gray-500 mt-1">
@@ -145,27 +193,12 @@ const PaymentVerification: React.FC<PaymentVerificationProps> = ({
 
         <div className="flex flex-col space-y-3">
           <button
-            onClick={handleAutoVerification}
+            onClick={handleManualVerification}
             disabled={isVerifying}
             className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isVerifying ? 'Verifying Payment...' : 'Verify Payment'}
+            {isVerifying ? 'Verifying with Razorpay...' : 'Verify Payment Manually'}
           </button>
-
-          {showManualVerification && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-yellow-800 text-sm mb-3">
-                Auto-verification failed. If you've completed the payment, 
-                please enter your UPI transaction ID above and click below:
-              </p>
-              <button
-                onClick={handleManualVerification}
-                className="w-full bg-yellow-600 text-white py-2 rounded-lg font-semibold hover:bg-yellow-700 transition-colors"
-              >
-                Submit for Manual Verification
-              </button>
-            </div>
-          )}
 
           <button
             onClick={onCancel}
@@ -177,11 +210,19 @@ const PaymentVerification: React.FC<PaymentVerificationProps> = ({
       </div>
 
       <div className="mt-6 text-center">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+          <p className="text-green-800 text-sm font-semibold">
+            🔒 Secure Payment Processing by Razorpay
+          </p>
+          <p className="text-green-600 text-xs mt-1">
+            Payment verification is automatic and secure
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 text-center">
         <p className="text-xs text-gray-500">
-          Transaction ID: {transaction.id}
-        </p>
-        <p className="text-xs text-gray-500 mt-1">
-          Having trouble? Contact support with this transaction ID
+          Having trouble? Contact support with Transaction ID: {transaction.id}
         </p>
       </div>
     </div>
