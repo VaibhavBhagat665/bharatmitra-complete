@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../contexts/UserContext';
-import { paymentService, PaymentTransaction } from '../services/paymentService';
+import { razorpayService, PaymentTransaction } from '../services/razorpayService';
 import PaymentVerification from './PaymentVerification';
 
 interface ComboOption {
@@ -43,18 +43,19 @@ const BuyTokens = () => {
   const [singleTokens, setSingleTokens] = useState<number>(0);
   const [paymentStep, setPaymentStep] = useState<'select' | 'payment' | 'verification' | 'success'>('select');
   const [currentTransaction, setCurrentTransaction] = useState<PaymentTransaction | null>(null);
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [upiString, setUpiString] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [createTransactionError, setCreateTransactionError] = useState<string>('');
 
   const handleComboSelect = (comboId: string) => {
     setSelectedCombo(comboId);
     setSingleTokens(0);
+    setCreateTransactionError('');
   };
 
   const handleSingleTokenChange = (quantity: number) => {
     setSingleTokens(quantity);
     setSelectedCombo(null);
+    setCreateTransactionError('');
   };
 
   const calculateTotal = () => {
@@ -72,7 +73,7 @@ const BuyTokens = () => {
     };
   };
 
-  const handlePayNow = () => {
+  const handlePayNow = async () => {
     const { amount, tokens } = calculateTotal();
     
     if (amount <= 0 || tokens <= 0) {
@@ -80,22 +81,25 @@ const BuyTokens = () => {
       return;
     }
 
-    // Create a new transaction
-    const transaction = paymentService.createTransaction(
-      amount, 
-      tokens, 
-      userData?.id || 'anonymous'
-    );
+    setIsProcessing(true);
+    setCreateTransactionError('');
 
-    setCurrentTransaction(transaction);
-    
-    // Generate UPI payment string and QR code
-    const upiPaymentString = paymentService.generateUpiPaymentString(transaction);
-    const qrUrl = paymentService.generateQRCode(upiPaymentString);
-    
-    setUpiString(upiPaymentString);
-    setQrCodeUrl(qrUrl);
-    setPaymentStep('payment');
+    try {
+      // Create Razorpay transaction
+      const transaction = await razorpayService.createTransaction(
+        amount, 
+        tokens, 
+        userData?.id || 'anonymous'
+      );
+
+      setCurrentTransaction(transaction);
+      setPaymentStep('payment');
+    } catch (error) {
+      console.error('Error creating transaction:', error);
+      setCreateTransactionError('Failed to create payment. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handlePaymentComplete = () => {
@@ -108,7 +112,7 @@ const BuyTokens = () => {
     setIsProcessing(true);
     
     try {
-      await rewardTokens(transaction.tokens, `UPI Purchase - ${transaction.id}`);
+      await rewardTokens(transaction.tokens, `Razorpay Purchase - ${transaction.id}`);
       await refreshUserData();
       setPaymentStep('success');
     } catch (error) {
@@ -124,19 +128,20 @@ const BuyTokens = () => {
     setSingleTokens(0);
     setPaymentStep('select');
     setCurrentTransaction(null);
-    setQrCodeUrl('');
-    setUpiString('');
-  };
-
-  const copyUpiString = () => {
-    navigator.clipboard.writeText(upiString);
-    alert('UPI payment string copied to clipboard!');
+    setCreateTransactionError('');
   };
 
   const copyTransactionId = () => {
     if (currentTransaction) {
       navigator.clipboard.writeText(currentTransaction.id);
       alert('Transaction ID copied to clipboard!');
+    }
+  };
+
+  const copyRazorpayOrderId = () => {
+    if (currentTransaction && currentTransaction.razorpayOrderId) {
+      navigator.clipboard.writeText(currentTransaction.razorpayOrderId);
+      alert('Razorpay Order ID copied to clipboard!');
     }
   };
 
@@ -158,9 +163,12 @@ const BuyTokens = () => {
                 Current Token Balance: {userData?.bharat_tokens || 0} tokens
               </p>
               {currentTransaction && (
-                <p className="text-green-600 text-sm mt-2">
-                  Transaction ID: {currentTransaction.id}
-                </p>
+                <div className="text-green-600 text-sm mt-2">
+                  <p>Transaction ID: {currentTransaction.id}</p>
+                  {currentTransaction.razorpayPaymentId && (
+                    <p>Razorpay Payment ID: {currentTransaction.razorpayPaymentId}</p>
+                  )}
+                </div>
               )}
             </div>
             <button
@@ -225,57 +233,62 @@ const BuyTokens = () => {
                   {currentTransaction.tokens} Bharat Tokens
                 </p>
                 <p className="text-2xl font-bold text-blue-600">₹{currentTransaction.amount}</p>
-                <p className="text-sm text-gray-600 mt-2">
-                  Transaction ID: {currentTransaction.id}
-                  <button
-                    onClick={copyTransactionId}
-                    className="ml-2 text-blue-600 hover:text-blue-800 underline"
-                  >
-                    Copy
-                  </button>
-                </p>
+                <div className="text-sm text-gray-600 mt-2 space-y-1">
+                  <p>
+                    Transaction ID: {currentTransaction.id}
+                    <button
+                      onClick={copyTransactionId}
+                      className="ml-2 text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Copy
+                    </button>
+                  </p>
+                  <p>
+                    Razorpay Order ID: {currentTransaction.razorpayOrderId}
+                    <button
+                      onClick={copyRazorpayOrderId}
+                      className="ml-2 text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Copy
+                    </button>
+                  </p>
+                </div>
               </div>
             </div>
 
             <div className="text-center mb-6">
               <h2 className="text-lg font-semibold mb-4">Scan QR Code to Pay</h2>
-              {qrCodeUrl && (
+              {currentTransaction.qrCodeUrl ? (
                 <div className="flex justify-center mb-4">
                   <img 
-                    src={qrCodeUrl} 
-                    alt="UPI QR Code" 
+                    src={currentTransaction.qrCodeUrl} 
+                    alt="Razorpay QR Code" 
                     className="border-2 border-gray-300 rounded-lg shadow-md"
                     style={{ width: '250px', height: '250px' }}
                   />
                 </div>
+              ) : (
+                <div className="bg-gray-100 rounded-lg p-8 mb-4">
+                  <p className="text-gray-600">QR Code loading...</p>
+                </div>
               )}
               
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <p className="text-sm text-gray-600 mb-2">Or copy UPI payment string:</p>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="text"
-                    value={upiString}
-                    readOnly
-                    className="flex-1 p-2 text-sm border rounded bg-white text-gray-700"
-                  />
-                  <button
-                    onClick={copyUpiString}
-                    className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition-colors text-sm"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                 <p className="text-yellow-800 text-sm">
                   <strong>Payment Instructions:</strong><br />
                   1. Open any UPI app (Google Pay, PhonePe, Paytm, etc.)<br />
-                  2. Scan the QR code or paste the UPI string<br />
+                  2. Scan the QR code above<br />
                   3. Verify the amount is ₹{currentTransaction.amount}<br />
                   4. Complete the payment<br />
                   5. Click "I've Completed Payment" below
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-blue-800 text-sm">
+                  <strong>🔒 Secure Payment by Razorpay</strong><br />
+                  All payments are processed securely through Razorpay.<br />
+                  Your payment will be automatically verified.
                 </p>
               </div>
 
@@ -310,6 +323,12 @@ const BuyTokens = () => {
             Current Balance: <span className="font-semibold text-blue-600">{userData?.bharat_tokens || 0} tokens</span>
           </p>
         </div>
+
+        {createTransactionError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 max-w-2xl mx-auto">
+            <p className="text-red-600 text-center">{createTransactionError}</p>
+          </div>
+        )}
 
         {/* Combo Packs */}
         <div className="mb-8">
@@ -380,10 +399,10 @@ const BuyTokens = () => {
               </div>
               <button
                 onClick={handlePayNow}
-                disabled={amount <= 0}
+                disabled={amount <= 0 || isProcessing}
                 className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Pay Now
+                {isProcessing ? 'Creating Payment...' : 'Pay with Razorpay'}
               </button>
             </div>
           </div>
@@ -394,18 +413,19 @@ const BuyTokens = () => {
           <h3 className="text-lg font-semibold mb-2">How it works:</h3>
           <div className="text-sm text-gray-600 space-y-1">
             <p>1. Select a combo pack or enter quantity for single tokens</p>
-            <p>2. Click "Pay Now" to generate secure payment link</p>
-            <p>3. Complete payment using UPI (Google Pay, PhonePe, etc.)</p>
-            <p>4. Verify payment with transaction ID</p>
-            <p>5. Tokens will be added after verification</p>
+            <p>2. Click "Pay with Razorpay" to create secure payment</p>
+            <p>3. Scan QR code with any UPI app (Google Pay, PhonePe, etc.)</p>
+            <p>4. Complete payment and click "I've Completed Payment"</p>
+            <p>5. Payment will be automatically verified by Razorpay</p>
+            <p>6. Tokens will be added to your account instantly</p>
           </div>
           
           <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-blue-800 text-sm font-semibold">
-              🔒 Secure Payment Processing
+              🔒 Powered by Razorpay - India's Most Trusted Payment Gateway
             </p>
             <p className="text-blue-600 text-xs mt-1">
-              All transactions are tracked and verified for security
+              All transactions are secure and automatically verified
             </p>
           </div>
         </div>
