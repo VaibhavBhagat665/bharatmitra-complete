@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../contexts/UserContext';
+import { paymentService, PaymentTransaction } from './paymentService';
+import PaymentVerification from './PaymentVerification';
 
 interface ComboOption {
   id: string;
@@ -34,19 +36,16 @@ const comboOptions: ComboOption[] = [
 ];
 
 const SINGLE_TOKEN_PRICE = 10;
-const UPI_ID = 'vaibhavbhagat7461@oksbi';
-const UPI_NAME = 'Vaibhav Bhagat';
 
 const BuyTokens = () => {
   const { rewardTokens, userData, refreshUserData } = useUser();
   const [selectedCombo, setSelectedCombo] = useState<string | null>(null);
   const [singleTokens, setSingleTokens] = useState<number>(0);
-  const [paymentStep, setPaymentStep] = useState<'select' | 'payment' | 'success'>('select');
+  const [paymentStep, setPaymentStep] = useState<'select' | 'payment' | 'verification' | 'success'>('select');
+  const [currentTransaction, setCurrentTransaction] = useState<PaymentTransaction | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [upiString, setUpiString] = useState<string>('');
-  const [totalAmount, setTotalAmount] = useState<number>(0);
-  const [tokensToAdd, setTokensToAdd] = useState<number>(0);
-  const [paymentLoading, setPaymentLoading] = useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   const handleComboSelect = (comboId: string) => {
     setSelectedCombo(comboId);
@@ -73,14 +72,6 @@ const BuyTokens = () => {
     };
   };
 
-  const generateUpiPayment = (amount: number) => {
-    const upiUrl = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${amount}&cu=INR&tn=${encodeURIComponent('Bharat Tokens Purchase')}`;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUrl)}`;
-    
-    setUpiString(upiUrl);
-    setQrCodeUrl(qrUrl);
-  };
-
   const handlePayNow = () => {
     const { amount, tokens } = calculateTotal();
     
@@ -89,24 +80,42 @@ const BuyTokens = () => {
       return;
     }
 
-    setTotalAmount(amount);
-    setTokensToAdd(tokens);
-    generateUpiPayment(amount);
+    // Create a new transaction
+    const transaction = paymentService.createTransaction(
+      amount, 
+      tokens, 
+      userData?.id || 'anonymous'
+    );
+
+    setCurrentTransaction(transaction);
+    
+    // Generate UPI payment string and QR code
+    const upiPaymentString = paymentService.generateUpiPaymentString(transaction);
+    const qrUrl = paymentService.generateQRCode(upiPaymentString);
+    
+    setUpiString(upiPaymentString);
+    setQrCodeUrl(qrUrl);
     setPaymentStep('payment');
   };
 
-  const handlePaymentSuccess = async () => {
-    setPaymentLoading(true);
+  const handlePaymentComplete = () => {
+    if (currentTransaction) {
+      setPaymentStep('verification');
+    }
+  };
+
+  const handleVerificationSuccess = async (transaction: PaymentTransaction) => {
+    setIsProcessing(true);
     
     try {
-      await rewardTokens(tokensToAdd, 'UPI Purchase');
+      await rewardTokens(transaction.tokens, `UPI Purchase - ${transaction.id}`);
       await refreshUserData();
       setPaymentStep('success');
     } catch (error) {
       console.error('Error adding tokens:', error);
-      alert('Failed to add tokens. Please contact support.');
+      alert('Payment verified but failed to add tokens. Please contact support with transaction ID: ' + transaction.id);
     } finally {
-      setPaymentLoading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -114,10 +123,9 @@ const BuyTokens = () => {
     setSelectedCombo(null);
     setSingleTokens(0);
     setPaymentStep('select');
+    setCurrentTransaction(null);
     setQrCodeUrl('');
     setUpiString('');
-    setTotalAmount(0);
-    setTokensToAdd(0);
   };
 
   const copyUpiString = () => {
@@ -125,8 +133,16 @@ const BuyTokens = () => {
     alert('UPI payment string copied to clipboard!');
   };
 
+  const copyTransactionId = () => {
+    if (currentTransaction) {
+      navigator.clipboard.writeText(currentTransaction.id);
+      alert('Transaction ID copied to clipboard!');
+    }
+  };
+
   const { amount, tokens } = calculateTotal();
 
+  // Success screen
   if (paymentStep === 'success') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 p-6">
@@ -135,12 +151,17 @@ const BuyTokens = () => {
             <div className="text-green-600 text-6xl mb-4">✅</div>
             <h1 className="text-3xl font-bold text-green-800 mb-4">Payment Successful!</h1>
             <p className="text-gray-600 mb-6">
-              {tokensToAdd} Bharat Tokens have been added to your account.
+              {currentTransaction?.tokens} Bharat Tokens have been added to your account.
             </p>
             <div className="bg-green-50 rounded-lg p-4 mb-6">
               <p className="text-green-800 font-semibold">
                 Current Token Balance: {userData?.bharat_tokens || 0} tokens
               </p>
+              {currentTransaction && (
+                <p className="text-green-600 text-sm mt-2">
+                  Transaction ID: {currentTransaction.id}
+                </p>
+              )}
             </div>
             <button
               onClick={handleStartOver}
@@ -154,7 +175,44 @@ const BuyTokens = () => {
     );
   }
 
-  if (paymentStep === 'payment') {
+  // Payment verification screen
+  if (paymentStep === 'verification' && currentTransaction) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 p-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <h1 className="text-2xl font-bold text-center mb-6">Verify Payment</h1>
+            
+            <div className="text-center mb-6">
+              <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                <p className="text-lg font-semibold text-blue-800">
+                  {currentTransaction.tokens} Bharat Tokens
+                </p>
+                <p className="text-2xl font-bold text-blue-600">₹{currentTransaction.amount}</p>
+              </div>
+            </div>
+
+            {isProcessing ? (
+              <div className="text-center">
+                <div className="text-blue-600 text-6xl mb-4">⏳</div>
+                <h2 className="text-xl font-semibold mb-4">Processing...</h2>
+                <p className="text-gray-600">Adding tokens to your account...</p>
+              </div>
+            ) : (
+              <PaymentVerification
+                transaction={currentTransaction}
+                onVerificationSuccess={handleVerificationSuccess}
+                onCancel={handleStartOver}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Payment screen
+  if (paymentStep === 'payment' && currentTransaction) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 p-6">
         <div className="max-w-2xl mx-auto">
@@ -164,9 +222,18 @@ const BuyTokens = () => {
             <div className="text-center mb-6">
               <div className="bg-blue-50 rounded-lg p-4 mb-4">
                 <p className="text-lg font-semibold text-blue-800">
-                  {tokensToAdd} Bharat Tokens
+                  {currentTransaction.tokens} Bharat Tokens
                 </p>
-                <p className="text-2xl font-bold text-blue-600">₹{totalAmount}</p>
+                <p className="text-2xl font-bold text-blue-600">₹{currentTransaction.amount}</p>
+                <p className="text-sm text-gray-600 mt-2">
+                  Transaction ID: {currentTransaction.id}
+                  <button
+                    onClick={copyTransactionId}
+                    className="ml-2 text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Copy
+                  </button>
+                </p>
               </div>
             </div>
 
@@ -177,7 +244,8 @@ const BuyTokens = () => {
                   <img 
                     src={qrCodeUrl} 
                     alt="UPI QR Code" 
-                    className="border-2 border-gray-300 rounded-lg"
+                    className="border-2 border-gray-300 rounded-lg shadow-md"
+                    style={{ width: '250px', height: '250px' }}
                   />
                 </div>
               )}
@@ -202,21 +270,21 @@ const BuyTokens = () => {
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                 <p className="text-yellow-800 text-sm">
-                  <strong>Instructions:</strong><br />
+                  <strong>Payment Instructions:</strong><br />
                   1. Open any UPI app (Google Pay, PhonePe, Paytm, etc.)<br />
                   2. Scan the QR code or paste the UPI string<br />
-                  3. Complete the payment of ₹{totalAmount}<br />
-                  4. Click "Payment Completed" below after successful payment
+                  3. Verify the amount is ₹{currentTransaction.amount}<br />
+                  4. Complete the payment<br />
+                  5. Click "I've Completed Payment" below
                 </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button
-                  onClick={handlePaymentSuccess}
-                  disabled={paymentLoading}
-                  className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
+                  onClick={handlePaymentComplete}
+                  className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors"
                 >
-                  {paymentLoading ? 'Processing...' : 'Payment Completed'}
+                  I've Completed Payment
                 </button>
                 <button
                   onClick={handleStartOver}
@@ -232,6 +300,7 @@ const BuyTokens = () => {
     );
   }
 
+  // Token selection screen
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-blue-50 p-6">
       <div className="max-w-4xl mx-auto">
@@ -325,9 +394,19 @@ const BuyTokens = () => {
           <h3 className="text-lg font-semibold mb-2">How it works:</h3>
           <div className="text-sm text-gray-600 space-y-1">
             <p>1. Select a combo pack or enter quantity for single tokens</p>
-            <p>2. Click "Pay Now" to proceed to payment</p>
-            <p>3. Complete payment using UPI</p>
-            <p>4. Tokens will be added to your account instantly</p>
+            <p>2. Click "Pay Now" to generate secure payment link</p>
+            <p>3. Complete payment using UPI (Google Pay, PhonePe, etc.)</p>
+            <p>4. Verify payment with transaction ID</p>
+            <p>5. Tokens will be added after verification</p>
+          </div>
+          
+          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-blue-800 text-sm font-semibold">
+              🔒 Secure Payment Processing
+            </p>
+            <p className="text-blue-600 text-xs mt-1">
+              All transactions are tracked and verified for security
+            </p>
           </div>
         </div>
       </div>
