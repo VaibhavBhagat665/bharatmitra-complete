@@ -43,6 +43,7 @@ interface UserContextType {
   userBadge: string;
   getUserProgress: () => { level: number; tokensToNextLevel: number };
   refreshLeaderboard: () => Promise<void>;
+  leaderboardError: string | null;
 }
 
 export const UserContext = createContext<UserContextType>({
@@ -70,6 +71,7 @@ export const UserContext = createContext<UserContextType>({
   userBadge: 'Explorer',
   getUserProgress: () => ({ level: 1, tokensToNextLevel: 100 }),
   refreshLeaderboard: async () => {},
+  leaderboardError: null,
 });
 
 interface UserProviderProps {
@@ -84,6 +86,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [language, setLanguage] = useState<'en' | 'hi'>('en');
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
   
   const { isPlaying, isPaused, activeMessageId, togglePlayPause, cancel } = useTextToSpeech();
 
@@ -111,13 +114,27 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const fetchLeaderboardData = async (): Promise<LeaderboardUser[]> => {
     try {
       console.log('Fetching leaderboard data...');
+      setLeaderboardError(null);
+      
+      // Check if user is authenticated
+      if (!auth.currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Verify user token is valid
+      await auth.currentUser.getIdToken(true);
+      
       const usersRef = collection(db, 'users');
       const q = query(usersRef, orderBy('bharat_tokens', 'desc'), limit(100));
+      
+      console.log('Executing Firestore query...');
       const querySnapshot = await getDocs(q);
       
       const leaderboard: LeaderboardUser[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
+        console.log(`Processing user: ${data.username}, tokens: ${data.bharat_tokens}`);
+        
         // Only include users with valid data
         if (data.uid && data.username && data.bharat_tokens !== undefined) {
           leaderboard.push({
@@ -133,11 +150,33 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         }
       });
       
-      console.log(`Fetched ${leaderboard.length} users for leaderboard`);
+      console.log(`Successfully fetched ${leaderboard.length} users for leaderboard`);
       return leaderboard;
-    } catch (error) {
+      
+    } catch (error: any) {
       console.error('Error fetching leaderboard data:', error);
-      return [];
+      
+      // Detailed error logging
+      if (error.code) {
+        console.error('Firestore error code:', error.code);
+        console.error('Firestore error message:', error.message);
+        
+        // Handle specific Firestore errors
+        switch (error.code) {
+          case 'permission-denied':
+            throw new Error('Permission denied. Please check your authentication and security rules.');
+          case 'unavailable':
+            throw new Error('Firestore service is currently unavailable. Please try again later.');
+          case 'unauthenticated':
+            throw new Error('User authentication expired. Please log in again.');
+          case 'failed-precondition':
+            throw new Error('Firestore operation failed due to precondition. Please try again.');
+          default:
+            throw new Error(`Firestore error: ${error.message}`);
+        }
+      }
+      
+      throw error;
     }
   };
 
@@ -145,11 +184,14 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     if (leaderboardLoading) return; // Prevent multiple simultaneous requests
     
     setLeaderboardLoading(true);
+    setLeaderboardError(null);
+    
     try {
       const data = await fetchLeaderboardData();
       setLeaderboardData(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error refreshing leaderboard:', error);
+      setLeaderboardError(error.message || 'Failed to load leaderboard data');
       throw error; // Re-throw to handle in components
     } finally {
       setLeaderboardLoading(false);
@@ -217,6 +259,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           setUserData(profileData);
           
           // Fetch leaderboard data after user authentication
+          console.log('User authenticated, fetching leaderboard...');
           await refreshLeaderboard();
           
           console.log('User authenticated successfully:', firebaseUser.uid);
@@ -301,6 +344,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       setUserData(null);
       setLeaderboardData([]);
       setAuthError(null);
+      setLeaderboardError(null);
       console.log('User logged out successfully');
     } catch (error: any) {
       console.error('Error signing out:', error);
@@ -481,6 +525,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     userBadge: userData ? getBadgeForTokens(userData.bharat_tokens) : 'Explorer',
     getUserProgress,
     refreshLeaderboard,
+    leaderboardError,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
