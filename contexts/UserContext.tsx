@@ -108,33 +108,53 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
   // Function to fetch leaderboard data
   const fetchLeaderboardData = async (): Promise<LeaderboardUser[]> => {
-    try {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, orderBy('bharat_tokens', 'desc'), limit(100));
-      const querySnapshot = await getDocs(q);
-      
-      const leaderboard: LeaderboardUser[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        leaderboard.push({
-          uid: data.uid,
-          username: data.username || 'Anonymous',
-          email: data.email,
-          occupation: data.occupation,
-          bharat_tokens: data.bharat_tokens || 0,
-          badge: getBadgeForTokens(data.bharat_tokens || 0),
-          avatar: data.avatar,
-          weeklyTokens: data.weeklyTokens || 0,
-        });
+  try {
+    // Use public_profiles collection instead of users
+    const publicProfilesRef = collection(db, 'public_profiles');
+    const q = query(publicProfilesRef, orderBy('bharat_tokens', 'desc'), limit(100));
+    const querySnapshot = await getDocs(q);
+    
+    const leaderboard: LeaderboardUser[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      leaderboard.push({
+        uid: data.uid,
+        username: data.username || 'Anonymous',
+        email: data.email,
+        occupation: data.occupation,
+        bharat_tokens: data.bharat_tokens || 0,
+        badge: getBadgeForTokens(data.bharat_tokens || 0),
+        avatar: data.avatar,
+        weeklyTokens: data.weeklyTokens || 0,
       });
-      
-      return leaderboard;
-    } catch (error) {
-      console.error('Error fetching leaderboard data:', error);
-      return [];
-    }
-  };
+    });
+    
+    return leaderboard;
+  } catch (error) {
+    console.error('Error fetching leaderboard data:', error);
+    return [];
+  }
+};
 
+  const updatePublicProfile = async (userData: UserProfile) => {
+  if (!userData) return;
+  
+  try {
+    const publicProfileRef = doc(db, 'public_profiles', userData.uid);
+    await updateDoc(publicProfileRef, {
+      uid: userData.uid,
+      username: userData.username,
+      occupation: userData.occupation,
+      bharat_tokens: userData.bharat_tokens,
+      badge: getBadgeForTokens(userData.bharat_tokens),
+      updated_at: serverTimestamp(),
+    });
+    
+    console.log('Public profile updated successfully');
+  } catch (error) {
+    console.error('Error updating public profile:', error);
+  }
+};
   const refreshLeaderboard = async () => {
     try {
       const data = await fetchLeaderboardData();
@@ -298,29 +318,33 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   };
 
   const updateUserProfile = async (data: { username: string; birthday: string; occupation: string }) => {
-    if (!user || !userData) {
-      throw new Error('User not authenticated');
-    }
+  if (!user || !userData) {
+    throw new Error('User not authenticated');
+  }
 
-    try {
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        username: data.username,
-        birthday: data.birthday,
-        occupation: data.occupation,
-      });
+  try {
+    const userRef = doc(db, 'users', user.uid);
+    await updateDoc(userRef, {
+      username: data.username,
+      birthday: data.birthday,
+      occupation: data.occupation,
+    });
 
-      setUserData(prev => prev ? { ...prev, ...data } : null);
-      
-      // Refresh leaderboard to reflect changes
-      await refreshLeaderboard();
-      
-      console.log('User profile updated successfully');
-    } catch (error) {
-      console.error('Error updating user profile:', error);
-      throw error;
-    }
-  };
+    const updatedUserData = { ...userData, ...data };
+    setUserData(updatedUserData);
+    
+    // Update public profile
+    await updatePublicProfile(updatedUserData);
+    
+    // Refresh leaderboard to reflect changes
+    await refreshLeaderboard();
+    
+    console.log('User profile updated successfully');
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    throw error;
+  }
+};
 
   const addSchemeToHistory = async (schemeId: string, schemeName: string) => {
     if (!user || !userData) {
@@ -358,30 +382,34 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   };
 
   const rewardTokens = async (amount: number, reason: string) => {
-    if (!user || !userData) {
-      throw new Error('User not authenticated');
-    }
+  if (!user || !userData) {
+    throw new Error('User not authenticated');
+  }
 
-    try {
-      const userRef = doc(db, 'users', user.uid);
-      const newTokenAmount = userData.bharat_tokens + amount;
-      
-      await updateDoc(userRef, {
-        bharat_tokens: newTokenAmount,
-      });
+  try {
+    const userRef = doc(db, 'users', user.uid);
+    const newTokenAmount = userData.bharat_tokens + amount;
+    
+    await updateDoc(userRef, {
+      bharat_tokens: newTokenAmount,
+    });
 
-      setUserData(prev => prev ? { ...prev, bharat_tokens: newTokenAmount } : null);
-      
-      // Refresh leaderboard after token change
-      await refreshLeaderboard();
-      
-      console.log(`Rewarded ${amount} tokens for: ${reason}. New balance: ${newTokenAmount}`);
-    } catch (error) {
-      console.error('Error rewarding tokens:', error);
-      throw error;
-    }
-  };
-
+    const updatedUserData = { ...userData, bharat_tokens: newTokenAmount };
+    setUserData(updatedUserData);
+    
+    // Update public profile
+    await updatePublicProfile(updatedUserData);
+    
+    // Refresh leaderboard after token change
+    await refreshLeaderboard();
+    
+    console.log(`Rewarded ${amount} tokens for: ${reason}. New balance: ${newTokenAmount}`);
+  } catch (error) {
+    console.error('Error rewarding tokens:', error);
+    throw error;
+  }
+};
+  
   const redeemPerk = async (perkId: string, price: number): Promise<boolean> => {
     if (!user || !userData) {
       console.error('User not authenticated');
