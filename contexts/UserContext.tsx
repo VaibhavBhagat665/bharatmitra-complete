@@ -1,9 +1,20 @@
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, serverTimestamp, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { UserProfile, SchemeHistoryEntry } from '../types';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
+
+interface LeaderboardUser {
+  uid: string;
+  username: string;
+  email: string;
+  occupation?: string;
+  bharat_tokens: number;
+  badge?: string;
+  avatar?: string;
+  weeklyTokens?: number;
+}
 
 interface UserContextType {
   user: User | null;
@@ -11,7 +22,7 @@ interface UserContextType {
   loading: boolean;
   authError: string | null;
   logout: () => Promise<void>;
-  addTokens: (amount: number) => Promise<void>; // Added this missing function
+  addTokens: (amount: number) => Promise<void>;
   rewardTokens: (amount: number, reason: string) => Promise<void>;
   redeemPerk: (perkId: string, price: number) => Promise<boolean>;
   addSchemeToHistory: (schemeId: string, schemeName: string) => Promise<void>;
@@ -26,6 +37,12 @@ interface UserContextType {
   // For compatibility with RedeemPage
   tokenBalance: number;
   deductTokens: (amount: number) => boolean;
+  // Leaderboard data
+  leaderboardData: LeaderboardUser[];
+  userRank: number | null;
+  userBadge: string;
+  getUserProgress: () => { level: number; tokensToNextLevel: number };
+  refreshLeaderboard: () => Promise<void>;
 }
 
 export const UserContext = createContext<UserContextType>({
@@ -34,7 +51,7 @@ export const UserContext = createContext<UserContextType>({
   loading: true,
   authError: null,
   logout: async () => {},
-  addTokens: async () => {}, // Added default implementation
+  addTokens: async () => {},
   rewardTokens: async () => {},
   redeemPerk: async () => false,
   addSchemeToHistory: async () => {},
@@ -48,6 +65,11 @@ export const UserContext = createContext<UserContextType>({
   cancelTts: () => {},
   tokenBalance: 0,
   deductTokens: () => false,
+  leaderboardData: [],
+  userRank: null,
+  userBadge: 'Explorer',
+  getUserProgress: () => ({ level: 1, tokensToNextLevel: 100 }),
+  refreshLeaderboard: async () => {},
 });
 
 interface UserProviderProps {
@@ -60,8 +82,75 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [language, setLanguage] = useState<'en' | 'hi'>('en');
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
   
   const { isPlaying, isPaused, activeMessageId, togglePlayPause, cancel } = useTextToSpeech();
+
+  // Function to determine badge based on tokens
+  const getBadgeForTokens = (tokens: number): string => {
+    if (tokens >= 1000) return 'Champion';
+    if (tokens >= 500) return 'Expert';
+    if (tokens >= 250) return 'Scholar';
+    if (tokens >= 100) return 'Learner';
+    return 'Explorer';
+  };
+
+  // Function to get user progress
+  const getUserProgress = () => {
+    if (!userData) return { level: 1, tokensToNextLevel: 100 };
+    
+    const tokens = userData.bharat_tokens;
+    const level = Math.floor(tokens / 100) + 1;
+    const tokensToNextLevel = 100 - (tokens % 100);
+    
+    return { level, tokensToNextLevel };
+  };
+
+  // Function to fetch leaderboard data
+  const fetchLeaderboardData = async (): Promise<LeaderboardUser[]> => {
+    try {
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, orderBy('bharat_tokens', 'desc'), limit(100));
+      const querySnapshot = await getDocs(q);
+      
+      const leaderboard: LeaderboardUser[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        leaderboard.push({
+          uid: data.uid,
+          username: data.username || 'Anonymous',
+          email: data.email,
+          occupation: data.occupation,
+          bharat_tokens: data.bharat_tokens || 0,
+          badge: getBadgeForTokens(data.bharat_tokens || 0),
+          avatar: data.avatar,
+          weeklyTokens: data.weeklyTokens || 0,
+        });
+      });
+      
+      return leaderboard;
+    } catch (error) {
+      console.error('Error fetching leaderboard data:', error);
+      return [];
+    }
+  };
+
+  const refreshLeaderboard = async () => {
+    try {
+      const data = await fetchLeaderboardData();
+      setLeaderboardData(data);
+    } catch (error) {
+      console.error('Error refreshing leaderboard:', error);
+    }
+  };
+
+  // Calculate user rank
+  const getUserRank = (): number | null => {
+    if (!userData || leaderboardData.length === 0) return null;
+    
+    const userIndex = leaderboardData.findIndex(u => u.uid === userData.uid);
+    return userIndex >= 0 ? userIndex + 1 : null;
+  };
 
   const fetchUserData = async (uid: string): Promise<UserProfile | null> => {
     try {
@@ -78,7 +167,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           occupation: data.occupation,
           joined_at: data.joined_at,
           auth_provider: data.auth_provider,
-          bharat_tokens: data.bharat_tokens || 0, // Default to 0 if not set
+          bharat_tokens: data.bharat_tokens || 0,
           scheme_history: data.scheme_history || [],
         };
       }
@@ -115,6 +204,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           const profileData = await fetchUserData(firebaseUser.uid);
           setUserData(profileData);
           
+          // Fetch leaderboard data
+          await refreshLeaderboard();
+          
           console.log('User authenticated successfully:', firebaseUser.uid);
           console.log('Current token balance:', profileData?.bharat_tokens);
         } catch (error: any) {
@@ -137,6 +229,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       } else {
         setUser(null);
         setUserData(null);
+        setLeaderboardData([]);
         console.log('User signed out or not authenticated');
       }
       
@@ -172,6 +265,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       console.log('Network back online');
       if (user) {
         refreshUserData();
+        refreshLeaderboard();
       }
     };
 
@@ -193,6 +287,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       await signOut(auth);
       setUser(null);
       setUserData(null);
+      setLeaderboardData([]);
       setAuthError(null);
       console.log('User logged out successfully');
     } catch (error: any) {
@@ -216,6 +311,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       });
 
       setUserData(prev => prev ? { ...prev, ...data } : null);
+      
+      // Refresh leaderboard to reflect changes
+      await refreshLeaderboard();
+      
       console.log('User profile updated successfully');
     } catch (error) {
       console.error('Error updating user profile:', error);
@@ -254,7 +353,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   };
 
-  // Simple addTokens function (wrapper around rewardTokens)
   const addTokens = async (amount: number) => {
     await rewardTokens(amount, 'Voice chat interaction');
   };
@@ -273,6 +371,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       });
 
       setUserData(prev => prev ? { ...prev, bharat_tokens: newTokenAmount } : null);
+      
+      // Refresh leaderboard after token change
+      await refreshLeaderboard();
       
       console.log(`Rewarded ${amount} tokens for: ${reason}. New balance: ${newTokenAmount}`);
     } catch (error) {
@@ -305,6 +406,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
       setUserData(prev => prev ? { ...prev, bharat_tokens: newTokenAmount } : null);
       
+      // Refresh leaderboard after token change
+      await refreshLeaderboard();
+      
       console.log(`Successfully redeemed perk ${perkId} for ${price} tokens. New balance: ${newTokenAmount}`);
       return true;
     } catch (error) {
@@ -313,7 +417,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   };
 
-  // Compatibility function for RedeemPage
   const deductTokens = (amount: number): boolean => {
     if (!user || !userData) {
       console.error('User not authenticated for token deduction');
@@ -323,7 +426,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     console.log(`Checking if can deduct ${amount} tokens from balance ${userData.bharat_tokens}`);
     
     if (userData.bharat_tokens >= amount) {
-      // Note: This is just a check, actual deduction happens in redeemPerk
       return true;
     } else {
       console.warn(`Insufficient tokens: need ${amount}, have ${userData.bharat_tokens}`);
@@ -350,7 +452,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     logout,
     updateUserProfile,
     addSchemeToHistory,
-    addTokens, // Added this to the return value
+    addTokens,
     rewardTokens,
     redeemPerk,
     refreshUserData,
@@ -360,9 +462,13 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     ttsActiveMessageId: activeMessageId,
     togglePlayPause,
     cancelTts: cancel,
-    // Compatibility properties for RedeemPage
     tokenBalance: userData?.bharat_tokens || 0,
     deductTokens,
+    leaderboardData,
+    userRank: getUserRank(),
+    userBadge: userData ? getBadgeForTokens(userData.bharat_tokens) : 'Explorer',
+    getUserProgress,
+    refreshLeaderboard,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
