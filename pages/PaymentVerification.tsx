@@ -1,6 +1,6 @@
 // PaymentVerification.tsx
 import React, { useState, useEffect } from 'react';
-import { paymentService, PaymentTransaction } from './paymentService';
+import { paymentService, PaymentTransaction } from '../services/paymentService';
 
 interface PaymentVerificationProps {
   transaction: PaymentTransaction;
