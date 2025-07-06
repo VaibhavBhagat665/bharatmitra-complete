@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../contexts/UserContext';
-import { paymentService, PaymentTransaction } from './paymentService';
+import { paymentService, PaymentTransaction } from '../services/paymentService';
 import PaymentVerification from './PaymentVerification';
 
 interface ComboOption {
