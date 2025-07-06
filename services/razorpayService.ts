@@ -1,4 +1,3 @@
-// services/razorpayService.ts
 export interface RazorpayOrder {
   id: string;
   amount: number;
@@ -22,7 +21,7 @@ export interface RazorpayPayment {
   created_at: number;
   contact?: string;
   email?: string;
-  vpa?: string; // UPI ID
+  vpa?: string;
   bank?: string;
   wallet?: string;
 }
@@ -53,38 +52,24 @@ export interface PaymentVerificationResult {
 class RazorpayService {
   private transactions: Map<string, PaymentTransaction> = new Map();
   private readonly TRANSACTION_TIMEOUT = 15 * 60 * 1000; // 15 minutes
-  private readonly RAZORPAY_KEY_ID = process.env.REACT_APP_RAZORPAY_KEY_ID || 'your_test_key_id';
-  private readonly RAZORPAY_KEY_SECRET = process.env.REACT_APP_RAZORPAY_KEY_SECRET || 'your_test_key_secret';
-  private readonly BASE_URL = 'https://api.razorpay.com/v1';
+  private readonly API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
-  // Generate a unique transaction ID
   generateTransactionId(): string {
     return `TXN${Date.now()}${Math.random().toString(36).substr(2, 9)}`.toUpperCase();
   }
 
-  // Create Razorpay order
-  async createRazorpayOrder(amount: number, tokens: number, userId: string): Promise<RazorpayOrder> {
-    const receipt = this.generateTransactionId();
-    
-    const orderData = {
-      amount: amount * 100, // Convert to paise
-      currency: 'INR',
-      receipt: receipt,
-      notes: {
-        userId: userId,
-        tokens: tokens.toString(),
-        purpose: 'Bharat Tokens Purchase'
-      }
-    };
-
-    // In production, this API call should be made from your backend
-    const response = await fetch(`${this.BASE_URL}/orders`, {
+  // Create Razorpay order via backend
+  async createRazorpayOrder(amount: number, tokens: number, userId: string): Promise<any> {
+    const response = await fetch(`${this.API_BASE_URL}/payment/create-order`, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${btoa(`${this.RAZORPAY_KEY_ID}:${this.RAZORPAY_KEY_SECRET}`)}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(orderData)
+      body: JSON.stringify({
+        amount,
+        tokens,
+        userId
+      })
     });
 
     if (!response.ok) {
@@ -94,46 +79,39 @@ class RazorpayService {
     return await response.json();
   }
 
-  // Generate QR code for UPI payment
+  // Generate QR code via backend
   async generateQRCode(orderId: string, amount: number): Promise<string> {
-    const qrData = {
-      type: 'upi_qr',
-      usage: 'single_use',
-      amount: amount * 100, // Convert to paise
-      currency: 'INR',
-      description: 'Bharat Tokens Purchase',
-      close_by: Math.floor(Date.now() / 1000) + 900, // 15 minutes from now
-      notes: {
-        order_id: orderId
-      }
-    };
-
-    // In production, make this API call from your backend
-    const response = await fetch(`${this.BASE_URL}/payments/qr_codes`, {
+    const response = await fetch(`${this.API_BASE_URL}/payment/create-qr`, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${btoa(`${this.RAZORPAY_KEY_ID}:${this.RAZORPAY_KEY_SECRET}`)}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(qrData)
+      body: JSON.stringify({
+        orderId,
+        amount
+      })
     });
 
     if (!response.ok) {
       throw new Error('Failed to generate QR code');
     }
 
-    const qrResponse = await response.json();
-    return qrResponse.image_url;
+    const result = await response.json();
+    return result.qrCodeUrl;
   }
 
   // Create a new payment transaction
   async createTransaction(amount: number, tokens: number, userId: string): Promise<PaymentTransaction> {
     try {
-      // Create Razorpay order first
-      const razorpayOrder = await this.createRazorpayOrder(amount, tokens, userId);
+      // Create Razorpay order via backend
+      const orderResponse = await this.createRazorpayOrder(amount, tokens, userId);
       
-      // Generate QR code
-      const qrCodeUrl = await this.generateQRCode(razorpayOrder.id, amount);
+      if (!orderResponse.success) {
+        throw new Error('Failed to create order');
+      }
+      
+      // Generate QR code via backend
+      const qrCodeUrl = await this.generateQRCode(orderResponse.orderId, amount);
       
       const transactionId = this.generateTransactionId();
       const now = new Date();
@@ -141,16 +119,16 @@ class RazorpayService {
 
       const transaction: PaymentTransaction = {
         id: transactionId,
-        orderId: razorpayOrder.id,
+        orderId: orderResponse.orderId,
         amount,
         tokens,
         status: 'pending',
-        razorpayOrderId: razorpayOrder.id,
+        razorpayOrderId: orderResponse.orderId,
         createdAt: now,
         expiresAt,
         userId,
         qrCodeUrl,
-        receipt: razorpayOrder.receipt
+        receipt: orderResponse.receipt
       };
 
       this.transactions.set(transactionId, transaction);
@@ -176,7 +154,7 @@ class RazorpayService {
     return this.transactions.get(transactionId) || null;
   }
 
-  // Verify payment with Razorpay
+  // Verify payment via backend
   async verifyPayment(transactionId: string, paymentId?: string): Promise<PaymentVerificationResult> {
     const transaction = this.transactions.get(transactionId);
     
@@ -202,83 +180,41 @@ class RazorpayService {
     }
 
     try {
-      // Check order status with Razorpay
-      const orderResponse = await fetch(`${this.BASE_URL}/orders/${transaction.razorpayOrderId}`, {
+      const response = await fetch(`${this.API_BASE_URL}/payment/verify-payment`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Basic ${btoa(`${this.RAZORPAY_KEY_ID}:${this.RAZORPAY_KEY_SECRET}`)}`
-        }
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: transaction.razorpayOrderId,
+          paymentId: paymentId
+        })
       });
 
-      if (!orderResponse.ok) {
-        throw new Error('Failed to fetch order status');
+      if (!response.ok) {
+        throw new Error('Failed to verify payment');
       }
 
-      const orderData: RazorpayOrder = await orderResponse.json();
+      const result = await response.json();
 
-      // Check if order is paid
-      if (orderData.status === 'paid') {
-        // Get payment details
-        const paymentsResponse = await fetch(`${this.BASE_URL}/orders/${transaction.razorpayOrderId}/payments`, {
-          headers: {
-            'Authorization': `Basic ${btoa(`${this.RAZORPAY_KEY_ID}:${this.RAZORPAY_KEY_SECRET}`)}`
-          }
-        });
+      if (result.success && result.verified) {
+        // Update transaction status
+        transaction.status = 'completed';
+        transaction.razorpayPaymentId = result.paymentId;
+        this.transactions.set(transactionId, transaction);
 
-        if (paymentsResponse.ok) {
-          const paymentsData = await paymentsResponse.json();
-          const successfulPayment = paymentsData.items.find(
-            (payment: RazorpayPayment) => payment.status === 'captured' || payment.status === 'authorized'
-          );
-
-          if (successfulPayment) {
-            // Update transaction status
-            transaction.status = 'completed';
-            transaction.razorpayPaymentId = successfulPayment.id;
-            this.transactions.set(transactionId, transaction);
-
-            return {
-              success: true,
-              transactionId: transaction.id,
-              message: 'Payment verified successfully',
-              verified: true,
-              paymentDetails: successfulPayment
-            };
-          }
-        }
-      }
-
-      // If paymentId is provided, verify specific payment
-      if (paymentId) {
-        const paymentResponse = await fetch(`${this.BASE_URL}/payments/${paymentId}`, {
-          headers: {
-            'Authorization': `Basic ${btoa(`${this.RAZORPAY_KEY_ID}:${this.RAZORPAY_KEY_SECRET}`)}`
-          }
-        });
-
-        if (paymentResponse.ok) {
-          const paymentData: RazorpayPayment = await paymentResponse.json();
-          
-          if (paymentData.order_id === transaction.razorpayOrderId && 
-              (paymentData.status === 'captured' || paymentData.status === 'authorized')) {
-            
-            transaction.status = 'completed';
-            transaction.razorpayPaymentId = paymentData.id;
-            this.transactions.set(transactionId, transaction);
-
-            return {
-              success: true,
-              transactionId: transaction.id,
-              message: 'Payment verified successfully',
-              verified: true,
-              paymentDetails: paymentData
-            };
-          }
-        }
+        return {
+          success: true,
+          transactionId: transaction.id,
+          message: 'Payment verified successfully',
+          verified: true,
+          paymentDetails: result
+        };
       }
 
       return {
         success: false,
-        message: 'Payment not found or not completed yet. Please ensure payment is successful and try again.',
+        message: result.message || 'Payment not found or not completed yet. Please ensure payment is successful and try again.',
         verified: false
       };
 
@@ -290,66 +226,6 @@ class RazorpayService {
         verified: false
       };
     }
-  }
-
-  // Webhook handler for Razorpay events
-  handleWebhook(payload: any, signature: string): boolean {
-    try {
-      // Verify webhook signature
-      const expectedSignature = this.generateWebhookSignature(payload);
-      
-      if (signature !== expectedSignature) {
-        console.error('Invalid webhook signature');
-        return false;
-      }
-
-      // Handle payment success event
-      if (payload.event === 'payment.captured') {
-        const payment = payload.payload.payment.entity;
-        const orderId = payment.order_id;
-        
-        // Find transaction by order ID
-        const transaction = Array.from(this.transactions.values())
-          .find(tx => tx.razorpayOrderId === orderId);
-        
-        if (transaction) {
-          transaction.status = 'completed';
-          transaction.razorpayPaymentId = payment.id;
-          this.transactions.set(transaction.id, transaction);
-        }
-      }
-
-      // Handle payment failure event
-      if (payload.event === 'payment.failed') {
-        const payment = payload.payload.payment.entity;
-        const orderId = payment.order_id;
-        
-        const transaction = Array.from(this.transactions.values())
-          .find(tx => tx.razorpayOrderId === orderId);
-        
-        if (transaction) {
-          transaction.status = 'failed';
-          this.transactions.set(transaction.id, transaction);
-        }
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Webhook handling error:', error);
-      return false;
-    }
-  }
-
-  // Generate webhook signature
-  private generateWebhookSignature(payload: any): string {
-    // This is a simplified version - use actual HMAC-SHA256 with your webhook secret
-    const crypto = require('crypto');
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || 'your_webhook_secret';
-    
-    return crypto
-      .createHmac('sha256', webhookSecret)
-      .update(JSON.stringify(payload))
-      .digest('hex');
   }
 
   // Get all transactions for a user
