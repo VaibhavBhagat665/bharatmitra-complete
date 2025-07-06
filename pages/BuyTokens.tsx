@@ -34,7 +34,7 @@ const comboOptions: ComboOption[] = [
 ];
 
 const SINGLE_TOKEN_PRICE = 10;
-const UPI_ID = 'vaibhavbhagat123@okaxis';
+const UPI_ID = 'vaibhavbhagat7461@oksbi';
 const UPI_NAME = 'Vaibhav Bhagat';
 
 const BuyTokens = () => {
