@@ -83,6 +83,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [language, setLanguage] = useState<'en' | 'hi'>('en');
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   
   const { isPlaying, isPaused, activeMessageId, togglePlayPause, cancel } = useTextToSpeech();
 
@@ -109,6 +110,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   // Function to fetch leaderboard data
   const fetchLeaderboardData = async (): Promise<LeaderboardUser[]> => {
     try {
+      console.log('Fetching leaderboard data...');
       const usersRef = collection(db, 'users');
       const q = query(usersRef, orderBy('bharat_tokens', 'desc'), limit(100));
       const querySnapshot = await getDocs(q);
@@ -116,18 +118,22 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       const leaderboard: LeaderboardUser[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        leaderboard.push({
-          uid: data.uid,
-          username: data.username || 'Anonymous',
-          email: data.email,
-          occupation: data.occupation,
-          bharat_tokens: data.bharat_tokens || 0,
-          badge: getBadgeForTokens(data.bharat_tokens || 0),
-          avatar: data.avatar,
-          weeklyTokens: data.weeklyTokens || 0,
-        });
+        // Only include users with valid data
+        if (data.uid && data.username && data.bharat_tokens !== undefined) {
+          leaderboard.push({
+            uid: data.uid,
+            username: data.username,
+            email: data.email || '',
+            occupation: data.occupation || '',
+            bharat_tokens: data.bharat_tokens || 0,
+            badge: getBadgeForTokens(data.bharat_tokens || 0),
+            avatar: data.avatar,
+            weeklyTokens: data.weeklyTokens || 0,
+          });
+        }
       });
       
+      console.log(`Fetched ${leaderboard.length} users for leaderboard`);
       return leaderboard;
     } catch (error) {
       console.error('Error fetching leaderboard data:', error);
@@ -136,11 +142,17 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   };
 
   const refreshLeaderboard = async () => {
+    if (leaderboardLoading) return; // Prevent multiple simultaneous requests
+    
+    setLeaderboardLoading(true);
     try {
       const data = await fetchLeaderboardData();
       setLeaderboardData(data);
     } catch (error) {
       console.error('Error refreshing leaderboard:', error);
+      throw error; // Re-throw to handle in components
+    } finally {
+      setLeaderboardLoading(false);
     }
   };
 
@@ -204,7 +216,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           const profileData = await fetchUserData(firebaseUser.uid);
           setUserData(profileData);
           
-          // Fetch leaderboard data
+          // Fetch leaderboard data after user authentication
           await refreshLeaderboard();
           
           console.log('User authenticated successfully:', firebaseUser.uid);
