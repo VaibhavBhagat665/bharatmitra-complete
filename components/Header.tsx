@@ -1,5 +1,5 @@
 import React, { useContext, useState, useRef, useEffect } from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { AshokaChakraIcon } from './icons/AshokaChakraIcon';
 import { TokenIcon } from './icons/TokenIcon';
 import { UserContext } from '../contexts/UserContext';
@@ -23,17 +23,19 @@ const Header: React.FC = () => {
     setLanguage, 
     user, 
     userData, 
-    loading 
+    loading,
+    logout 
   } = useContext(UserContext);
   
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isTokenMenuOpen, setIsTokenMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const tokenMenuRef = useRef<HTMLDivElement>(null);
 
-  // Enhanced scroll effect
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -42,7 +44,6 @@ const Header: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Click outside handlers
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -72,7 +73,8 @@ const Header: React.FC = () => {
       english: 'English',
       hindi: 'हिंदी',
       user: 'User',
-      processing: 'Processing...'
+      processing: 'Processing...',
+      loggingOut: 'Logging out...'
     },
     hi: {
       home: 'होम',
@@ -89,7 +91,8 @@ const Header: React.FC = () => {
       english: 'English',
       hindi: 'हिंदी',
       user: 'उपयोगकर्ता',
-      processing: 'प्रोसेसिंग...'
+      processing: 'प्रोसेसिंग...',
+      loggingOut: 'लॉगआउट हो रहा है...'
     }
   };
 
@@ -118,9 +121,20 @@ const Header: React.FC = () => {
     setIsMobileMenuOpen(false);
   };
 
-  const handleLogout = () => {
-    console.log('Logout clicked');
+  const handleLogout = async () => {
+    if (isLoggingOut) return; 
+    
+    setIsLoggingOut(true);
     setIsMenuOpen(false);
+    
+    try {
+      await logout(); 
+      navigate('/'); 
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   const toggleTokenMenu = () => {
@@ -240,6 +254,7 @@ const Header: React.FC = () => {
                     <button 
                       onClick={() => setIsMenuOpen(!isMenuOpen)} 
                       className="flex items-center space-x-2 p-2 rounded-full hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 transition-all duration-300 group"
+                      disabled={isLoggingOut}
                     >
                       <div className="p-1 rounded-full bg-gradient-to-r from-bharat-blue-500 to-bharat-blue-600 shadow-md">
                         <UserIcon className="h-5 w-5 text-white"/>
@@ -261,12 +276,25 @@ const Header: React.FC = () => {
                         </Link>
                         <button 
                           onClick={handleLogout} 
-                          className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 transition-all duration-200 mx-2 rounded-xl"
+                          disabled={isLoggingOut}
+                          className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 transition-all duration-200 mx-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <svg className="h-4 w-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                          </svg>
-                          {t.logout}
+                          {isLoggingOut ? (
+                            <>
+                              <svg className="h-4 w-4 mr-3 text-red-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              {t.loggingOut}
+                            </>
+                          ) : (
+                            <>
+                              <svg className="h-4 w-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                              </svg>
+                              {t.logout}
+                            </>
+                          )}
                         </button>
                       </div>
                     )}
@@ -354,6 +382,30 @@ const Header: React.FC = () => {
                     </svg>
                     {t.redeem}
                   </Link>
+                  
+                  {/* Mobile Logout Button */}
+                  <button
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="w-full flex items-center px-4 py-3 rounded-xl font-semibold text-base transition-all duration-300 text-gray-600 hover:text-red-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoggingOut ? (
+                      <>
+                        <svg className="h-5 w-5 mr-3 text-red-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        {t.loggingOut}
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-5 w-5 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        {t.logout}
+                      </>
+                    )}
+                  </button>
                 </div>
               )}
             </nav>
