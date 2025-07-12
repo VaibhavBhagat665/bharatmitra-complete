@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { CheckCircleIcon, XCircleIcon, PlayIcon, ClockIcon, DocumentTextIcon, AcademicCapIcon, BellIcon, UserIcon, CalendarDaysIcon, BookOpenIcon, PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
-import { UserContext } from './UserContext';
+import { UserContext } from '../contexts/UserContext';
 
 type Perk = {
   id: string;
