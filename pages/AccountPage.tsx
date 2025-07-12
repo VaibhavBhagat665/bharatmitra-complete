@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../contexts/UserContext';
 import { ChevronDownIcon, UserIcon, CalendarIcon, BriefcaseIcon, EnvelopeIcon, CurrencyRupeeIcon, ClockIcon, DocumentTextIcon, PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 
 const AccountPage: React.FC = () => {
     const { userData, updateUserProfile, language } = useUser();
@@ -45,7 +46,14 @@ const AccountPage: React.FC = () => {
             profileUpdateFailed: "Failed to update profile. Please try again.",
             selectOccupation: "Select your occupation",
             customOccupation: "Other (Please specify)",
-            enterCustomOccupation: "Enter your occupation"
+            enterCustomOccupation: "Enter your occupation",
+            logout: "Logout",
+            logoutConfirm: "Are you sure you want to logout?",
+            loggingOut: "Logging out...",
+            logoutSuccess: "Logged out successfully!",
+            logoutError: "Error logging out. Please try again.",
+            yes: "Yes",
+            no: "No"
         },
         hi: {
             title: "मेरा खाता",
@@ -76,7 +84,14 @@ const AccountPage: React.FC = () => {
             profileUpdateFailed: "प्रोफ़ाइल अपडेट करने में विफल। कृपया फिर से प्रयास करें।",
             selectOccupation: "अपना व्यवसाय चुनें",
             customOccupation: "अन्य (कृपया बताएं)",
-            enterCustomOccupation: "अपना व्यवसाय दर्ज करें"
+            enterCustomOccupation: "अपना व्यवसाय दर्ज करें",
+            logout: "लॉगआउट",
+            logoutConfirm: "क्या आप वाकई लॉगआउट करना चाहते हैं?",
+            loggingOut: "लॉगआउट हो रहा है...",
+            logoutSuccess: "सफलतापूर्वक लॉगआउट हो गया!",
+            logoutError: "लॉगआउट करने में त्रुटि। कृपया फिर से प्रयास करें।",
+            yes: "हाँ",
+            no: "नहीं"
         }
     };
 
@@ -114,6 +129,8 @@ const AccountPage: React.FC = () => {
 
     const [customOccupation, setCustomOccupation] = useState('');
     const [showCustomOccupation, setShowCustomOccupation] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     useEffect(() => {
         if (userData) {
@@ -178,6 +195,22 @@ const AccountPage: React.FC = () => {
         if (showCustomOccupation) return customOccupation;
         const option = occupationOptions.find(opt => opt.value === formData.occupation);
         return option ? option.label : formData.occupation;
+    };
+
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+        try {
+            await logout();
+            setNotification(t.logoutSuccess);
+            setTimeout(() => setNotification(''), 2000);
+        } catch (error) {
+            console.error('Logout error:', error);
+            setNotification(t.logoutError);
+            setTimeout(() => setNotification(''), 4000);
+        } finally {
+            setIsLoggingOut(false);
+            setShowLogoutConfirm(false);
+        }
     };
     
     if (!userData) {
@@ -471,6 +504,64 @@ const AccountPage: React.FC = () => {
                             </div>
                             <p className="text-gray-500 text-lg font-medium mb-2">{t.noSchemes}</p>
                             <p className="text-gray-400">{t.startExploring}</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+            {/* Logout Section */}
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                <div className="p-8 text-center">
+                    <div className="mb-6">
+                        <ArrowRightOnRectangleIcon className="w-12 h-12 mx-auto text-red-500 mb-4" />
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                            {t.logout}
+                        </h3>
+                        <p className="text-gray-600">
+                            {language === 'hi' 
+                                ? 'अपने खाते से सुरक्षित रूप से लॉगआउट करें।' 
+                                : 'Securely logout from your account.'}
+                        </p>
+                    </div>
+                    
+                    {!showLogoutConfirm ? (
+                        <button
+                            onClick={() => setShowLogoutConfirm(true)}
+                            className="bg-red-600 text-white font-medium py-3 px-8 rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center mx-auto shadow-md"
+                        >
+                            <ArrowRightOnRectangleIcon className="w-5 h-5 mr-2" />
+                            {t.logout}
+                        </button>
+                    ) : (
+                        <div className="space-y-4">
+                            <p className="text-gray-700 font-medium">
+                                {t.logoutConfirm}
+                            </p>
+                            <div className="flex justify-center gap-4">
+                                <button
+                                    onClick={() => setShowLogoutConfirm(false)}
+                                    disabled={isLoggingOut}
+                                    className="bg-gray-200 text-gray-800 font-medium py-2 px-6 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors duration-200"
+                                >
+                                    {t.no}
+                                </button>
+                                <button
+                                    onClick={handleLogout}
+                                    disabled={isLoggingOut}
+                                    className="bg-red-600 text-white font-medium py-2 px-6 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors duration-200 flex items-center"
+                                >
+                                    {isLoggingOut ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                            {t.loggingOut}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ArrowRightOnRectangleIcon className="w-4 h-4 mr-2" />
+                                            {t.yes}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
