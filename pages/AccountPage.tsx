@@ -4,7 +4,7 @@ import { ChevronDownIcon, UserIcon, CalendarIcon, BriefcaseIcon, EnvelopeIcon, C
 import { ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 
 const AccountPage: React.FC = () => {
-    const { userData, updateUserProfile, language } = useUser();
+    const { userData, updateUserProfile, language, logout } = useUser();
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
         username: '',
