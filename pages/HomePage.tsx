@@ -195,12 +195,9 @@ const HomePage: React.FC = () => {
   ];
 
   // Function to handle APK download
-  const handleDownloadAPK = () => {
-    const link = document.createElement('a');
-    link.href = '/bharat-mitra.apk'; 
-    link.download = 'bharat-mitra.apk';
-    link.click();
-  };
+ const handleDownloadAPK = () => {
+  window.open('https://drive.google.com/uc?export=download&id=1jAeH9JMWGM6k12KrC5VmFT8TsDftpxKP', '_blank');
+};
 
   return (
     <>
