@@ -244,38 +244,46 @@ const ScholarshipPage = () => {
   };
 
   const handleSearch = () => {
-    
     const filtered = REAL_SCHOLARSHIPS.filter(scholarship => {
       const { eligibility } = scholarship;
       const age = criteria.age ? parseInt(criteria.age) : null;
       const income = criteria.income ? parseInt(criteria.income) : null;
 
-      // Age matching
+      // Age matching - must be within the scholarship's age range
       const ageMatch = !age || 
-        ((!eligibility.minAge || age >= eligibility.minAge) && 
-         (!eligibility.maxAge || age <= eligibility.maxAge));
+        (age >= (eligibility.minAge || 0) && age <= (eligibility.maxAge || 100));
 
-      // Course matching
+      // Course matching - exact match or scholarship accepts all courses
       const courseMatch = !criteria.course || 
         eligibility.course.includes('All') ||
-        eligibility.course.some(course => 
-          course.toLowerCase().includes(criteria.course.toLowerCase()) ||
-          criteria.course.toLowerCase().includes(course.toLowerCase())
-        );
+        eligibility.course.includes(criteria.course);
 
-      // Caste matching
+      // Caste/Category matching - exact match or scholarship accepts all categories
       const casteMatch = !criteria.caste || 
         eligibility.caste.includes('All') ||
-        eligibility.caste.includes(criteria.caste) ||
-        (criteria.caste === 'Minority' && eligibility.caste.includes('Minority'));
+        eligibility.caste.includes(criteria.caste);
 
-      // Income matching
+      // Income matching - family income must be within the scholarship's income limit
       const incomeMatch = !income || 
         !eligibility.maxIncome || 
         income <= eligibility.maxIncome;
 
-      // State matching (all scholarships are available for all states in this example)
-      const stateMatch = true;
+      // State matching - all scholarships currently available for all states
+      const stateMatch = !criteria.state || 
+        eligibility.state.includes('All States') ||
+        eligibility.state.some(state => 
+          state.toLowerCase().includes(criteria.state.toLowerCase())
+        );
+
+      // Debug logging to see what's happening
+      console.log(`Scholarship: ${scholarship.name}`);
+      console.log(`Age Match: ${ageMatch} (User: ${age}, Range: ${eligibility.minAge}-${eligibility.maxAge})`);
+      console.log(`Course Match: ${courseMatch} (User: ${criteria.course}, Available: ${eligibility.course.join(', ')})`);
+      console.log(`Caste Match: ${casteMatch} (User: ${criteria.caste}, Available: ${eligibility.caste.join(', ')})`);
+      console.log(`Income Match: ${incomeMatch} (User: ${income}, Max: ${eligibility.maxIncome})`);
+      console.log(`State Match: ${stateMatch}`);
+      console.log(`Overall Match: ${ageMatch && courseMatch && casteMatch && incomeMatch && stateMatch}`);
+      console.log('---');
 
       return ageMatch && courseMatch && casteMatch && incomeMatch && stateMatch;
     });
@@ -392,7 +400,7 @@ const ScholarshipPage = () => {
           
           <div className="lg:col-span-1">
             <button 
-              type="submit" 
+              onClick={handleSearch}
               className="w-full bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700 transition-colors shadow-md"
             >
               Find Scholarships
