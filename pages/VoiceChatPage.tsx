@@ -14,6 +14,7 @@ const VoiceChatPage: React.FC = () => {
   const { 
     isListening, 
     transcript, 
+    detectedLanguage, // Use the detected language from speech recognition
     error: recognitionError,
     isComplete,
     startListening,
@@ -25,10 +26,10 @@ const VoiceChatPage: React.FC = () => {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const processedTranscriptRef = useRef<string>('');
 
-  const handleAiResponse = useCallback(async (query: string) => {
+  const handleAiResponse = useCallback(async (query: string, userLanguage: 'en' | 'hi') => {
     if (!query.trim() || isProcessingAI || query === processedTranscriptRef.current) return;
     
-    console.log('Processing AI response for:', query, 'in language:', language);
+    console.log('Processing AI response for:', query, 'in detected language:', userLanguage);
     processedTranscriptRef.current = query;
     setIsProcessingAI(true);
 
@@ -42,8 +43,8 @@ const VoiceChatPage: React.FC = () => {
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      // Use the context language for AI response
-      const aiResponseText = await getSchemeAdvice(query, language);
+      // Use the detected language for AI response
+      const aiResponseText = await getSchemeAdvice(query, userLanguage);
       
       const aiMessage: ChatMessageType = {
         id: `ai-${Date.now()}-${Math.random()}`,
@@ -54,17 +55,17 @@ const VoiceChatPage: React.FC = () => {
       
       setMessages(prev => [...prev, aiMessage]);
       
-      // Auto-play the AI response with the selected language from context
-      // Add a longer delay to ensure the message is rendered
+      // Auto-play the AI response with the detected language
       setTimeout(() => {
-        console.log('About to play AI response in language:', language);
-        togglePlayPause(aiResponseText, aiMessage.id, language);
-      }, 500);
+        console.log('Playing TTS with language:', userLanguage);
+        togglePlayPause(aiResponseText, aiMessage.id, userLanguage);
+      }, 300);
       
     } catch (error) {
       console.error('Error fetching AI response:', error);
       
-      const errorText = language === 'hi' 
+      // Use detected language for error message
+      const errorText = userLanguage === 'hi' 
         ? 'माफ करें, कुछ गलत हुआ। फिर से कोशिश करें।'
         : 'Sorry, something went wrong. Please try again.';
         
@@ -77,23 +78,24 @@ const VoiceChatPage: React.FC = () => {
       
       setMessages(prev => [...prev, errorMessage]);
       
-      // Also play error message
+      // Also play error message with detected language
       setTimeout(() => {
-        togglePlayPause(errorText, errorMessage.id, language);
-      }, 500);
+        togglePlayPause(errorText, errorMessage.id, userLanguage);
+      }, 300);
     } finally {
       setIsProcessingAI(false);
       resetSession();
       processedTranscriptRef.current = '';
     }
-  }, [addTokens, togglePlayPause, isProcessingAI, resetSession, language]);
+  }, [addTokens, togglePlayPause, isProcessingAI, resetSession]);
 
   useEffect(() => {
     if (isComplete && transcript.trim() && !isProcessingAI) {
-      console.log('Speech complete, processing:', transcript, 'Using context language:', language);
-      handleAiResponse(transcript);
+      console.log('Speech complete, processing:', transcript, 'Detected language:', detectedLanguage);
+      // Use detected language instead of context language
+      handleAiResponse(transcript, detectedLanguage);
     }
-  }, [isComplete, transcript, handleAiResponse, isProcessingAI, language]);
+  }, [isComplete, transcript, detectedLanguage, handleAiResponse, isProcessingAI]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -184,7 +186,7 @@ const VoiceChatPage: React.FC = () => {
           
           {transcript && (
             <div className="mt-3 inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
-              🗣️ {language === 'hi' ? 'सुना गया:' : 'Heard:'} {language === 'hi' ? 'हिंदी' : 'English'}
+              🗣️ {language === 'hi' ? 'सुना गया:' : 'Heard:'} {detectedLanguage === 'hi' ? 'हिंदी' : 'English'}
             </div>
           )}
         </div>
@@ -246,7 +248,7 @@ const VoiceChatPage: React.FC = () => {
                     <p className="text-blue-800 text-sm font-medium mb-1">
                       {language === 'hi' ? 'आपका संदेश:' : 'Your Message:'}
                       <span className="ml-2 text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">
-                        {language === 'hi' ? 'हिंदी' : 'English'}
+                        {detectedLanguage === 'hi' ? 'हिंदी' : 'English'}
                       </span>
                     </p>
                     <p className="text-blue-900 text-lg leading-relaxed">{transcript}</p>
@@ -293,21 +295,11 @@ const VoiceChatPage: React.FC = () => {
         <div className="mt-6 bg-white/50 rounded-lg p-4 text-center">
           <p className="text-gray-600">
             {language === 'hi' 
-              ? '💡 सुझाव: ऊपर दिए गए भाषा टॉगल से अपनी पसंदीदा भाषा चुनें। चैटबॉट उसी भाषा में जवाब देगा।'
-              : '💡 Tip: Use the language toggle above to select your preferred language. The chatbot will respond in the same language.'
+              ? '💡 सुझाव: आप जिस भाषा में बोलते हैं, चैटबॉट उसी भाषा में जवाब देगा। भाषा स्वतः पहचानी जाएगी।'
+              : '💡 Tip: The chatbot will respond in the same language you speak. Language is automatically detected.'
             }
           </p>
         </div>
-
-        {/* Debug Info - Remove in production */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-4 bg-gray-100 rounded-lg p-4 text-sm text-gray-700">
-            <p><strong>Debug Info:</strong></p>
-            <p>Selected Language: {language}</p>
-            <p>Is Playing: {isPlaying ? 'Yes' : 'No'}</p>
-            <p>Available Voices: {window.speechSynthesis?.getVoices().length || 0}</p>
-          </div>
-        )}
       </div>
     </div>
   );
