@@ -1,14 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
+import Confetti from 'react-confetti';
 import { CheckCircleIcon, XCircleIcon, PlayIcon, ClockIcon } from '@heroicons/react/24/solid';
-
-// Mock UserContext for demonstration
-const UserContext = React.createContext({
-  tokenBalance: 100,
-  user: { id: 'user1', email: 'user@example.com' },
-  userData: { username: 'TestUser', email: 'user@example.com' },
-  redeemPerk: async (id: string, price: number) => true,
-  addTokens: (amount: number) => {}
-});
+import { UserContext } from '../contexts/UserContext';
 
 // Define your Perk type inline
 type Perk = {
@@ -90,7 +83,7 @@ const PerkCard: React.FC<{
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}
         >
-          {isRedeeming ? '...' : canAfford ? 'Redeem' : 'Not enough tokens'}
+          {isRedeeming ? 'Redeeming...' : canAfford ? 'Redeem' : 'Not enough tokens'}
         </button>
       </div>
     </div>
@@ -199,16 +192,28 @@ const AdModal: React.FC<{
 };
 
 const RedeemPage: React.FC = () => {
-  const [tokenBalance, setTokenBalance] = useState(100);
+  const { tokenBalance, redeemPerk, user, userData, rewardTokens, refreshUserData } = useContext(UserContext);
   const [selectedCategory, setSelectedCategory] = useState<'All' | Perk['category']>('All');
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error'; } | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
   const [redeeming, setRedeeming] = useState<string | null>(null);
   const [showAdModal, setShowAdModal] = useState(false);
   const [lastAdWatch, setLastAdWatch] = useState<number | null>(null);
   const [redeemedPerks, setRedeemedPerks] = useState<string[]>([]);
 
-  const user = { id: 'user1', email: 'user@example.com' };
-  const userData = { username: 'TestUser', email: 'user@example.com' };
+  // Load last ad watch time from localStorage on mount
+  useEffect(() => {
+    const savedLastAdWatch = localStorage.getItem('lastAdWatch');
+    if (savedLastAdWatch) {
+      setLastAdWatch(parseInt(savedLastAdWatch));
+    }
+  }, []);
+
+  // Save last ad watch time to localStorage
+  const saveLastAdWatch = (timestamp: number) => {
+    setLastAdWatch(timestamp);
+    localStorage.setItem('lastAdWatch', timestamp.toString());
+  };
 
   const filtered = selectedCategory === 'All'
     ? ALL_PERKS
@@ -232,8 +237,17 @@ const RedeemPage: React.FC = () => {
     console.log('Perk ID:', id);
     console.log('Price:', price);
     console.log('Current token balance:', tokenBalance);
+    console.log('User authenticated:', !!user);
+    console.log('User data available:', !!userData);
+
+    if (!user || !userData) {
+      setNotification({ message: '❌ Please log in to redeem perks.', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
 
     if (tokenBalance < price) {
+      console.log('Insufficient tokens:', { need: price, have: tokenBalance });
       setNotification({ message: `❌ Not enough tokens. You need ${price} but have ${tokenBalance}.`, type: 'error' });
       setTimeout(() => setNotification(null), 3000);
       return;
@@ -241,72 +255,123 @@ const RedeemPage: React.FC = () => {
 
     try {
       setRedeeming(id);
+      console.log('Calling redeemPerk function...');
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const success = await redeemPerk(id, price);
+      console.log('redeemPerk result:', success);
       
-      const perk = ALL_PERKS.find(p => p.id === id);
-      
-      if (perk?.isWorking) {
-        // Working function - actually redeem
-        setTokenBalance(prev => prev - price);
-        setRedeemedPerks(prev => [...prev, id]);
+      if (success) {
+        const redeemedPerk = ALL_PERKS.find((p) => p.id === id);
         
-        // Show specific success message based on perk
-        let successMessage = '';
-        switch (id) {
-          case 'mentorship-2':
-            successMessage = '📝 Resume Review activated! Check your email for instructions.';
-            break;
-          case 'exam-1':
-            successMessage = '📚 Exam Prep Kit unlocked! Access your materials in the Study section.';
-            break;
-          case 'daily-1':
-            successMessage = '📅 Daily Scheme Tips activated! You\'ll receive daily notifications.';
-            break;
-          default:
-            successMessage = `🎉 Redeemed "${perk?.name}"! ${price} tokens deducted.`;
+        // Check if this is a working perk
+        if (redeemedPerk?.isWorking) {
+          setRedeemedPerks(prev => [...prev, id]);
+          
+          // Show specific success message based on perk
+          let successMessage = '';
+          switch (id) {
+            case 'mentorship-2':
+              successMessage = '📝 Resume Review activated! Check your email for instructions within 24 hours.';
+              break;
+            case 'exam-1':
+              successMessage = '📚 Exam Prep Kit unlocked! Access your materials in the Study section.';
+              break;
+            case 'daily-1':
+              successMessage = '📅 Daily Scheme Tips activated! You\'ll receive daily notifications starting tomorrow.';
+              break;
+            default:
+              successMessage = `🎉 Successfully redeemed "${redeemedPerk?.name}"!`;
+          }
+          
+          setNotification({ message: successMessage, type: 'success' });
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 3000);
+        } else {
+          // Non-working perk - show demo message
+          setNotification({ 
+            message: `🔧 "${redeemedPerk?.name}" is in demo mode. Tokens refunded.`, 
+            type: 'error' 
+          });
+          // In a real app, you might want to refund tokens here
         }
         
-        setNotification({ message: successMessage, type: 'success' });
         console.log('Redemption successful!');
       } else {
-        // Non-working function - show demo message
-        setNotification({ 
-          message: `🔧 "${perk?.name}" is in demo mode. This would normally cost ${price} tokens.`, 
-          type: 'error' 
-        });
-        console.log('Demo mode - no actual redemption');
+        setNotification({ message: `❌ Redemption failed. Please try again.`, type: 'error' });
+        console.log('Redemption failed - redeemPerk returned false');
       }
     } catch (error) {
       console.error('Redemption error:', error);
-      setNotification({ message: `❌ An error occurred: ${error}`, type: 'error' });
+      setNotification({ message: `❌ An error occurred during redemption. Please try again.`, type: 'error' });
     } finally {
       setRedeeming(null);
-      setTimeout(() => setNotification(null), 4000);
+      setTimeout(() => setNotification(null), 5000);
     }
   };
 
-  const handleAdComplete = (tokens: number) => {
-    setTokenBalance(prev => prev + tokens);
-    setLastAdWatch(Date.now());
-    setNotification({ 
-      message: `🎉 You earned ${tokens} tokens from watching the ad!`, 
-      type: 'success' 
-    });
-    setTimeout(() => setNotification(null), 4000);
+  const handleAdComplete = async (tokens: number) => {
+    try {
+      console.log(`Rewarding ${tokens} tokens for watching ad`);
+      
+      // Use the rewardTokens function from UserContext to add tokens to Firebase
+      await rewardTokens(tokens, `Watched advertisement - earned ${tokens} tokens`);
+      
+      // Save the ad watch timestamp
+      saveLastAdWatch(Date.now());
+      
+      setNotification({ 
+        message: `🎉 You earned ${tokens} tokens from watching the ad! New balance: ${tokenBalance + tokens}`, 
+        type: 'success' 
+      });
+      
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+      
+      console.log('Ad reward successful!');
+    } catch (error) {
+      console.error('Error rewarding ad tokens:', error);
+      setNotification({ 
+        message: `❌ Failed to reward tokens. Please try again.`, 
+        type: 'error' 
+      });
+    }
+    
+    setTimeout(() => setNotification(null), 5000);
   };
+
+  // Show login prompt if not authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen px-6 py-12 flex items-center justify-center" style={{ backgroundColor: '#fff6f7' }}>
+        <div className="text-center max-w-md">
+          <h1 className="text-3xl font-bold text-red-700 mb-4">Login Required</h1>
+          <p className="text-gray-700 mb-6">
+            Please log in to view your token balance and redeem perks.
+          </p>
+          <div className="bg-white rounded-lg p-6 shadow-md">
+            <p className="text-sm text-gray-600">
+              Your tokens are securely stored in your account and will be available once you log in.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen px-6 py-12" style={{ backgroundColor: '#fff6f7' }}>
+      {showConfetti && <Confetti />}
+      
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-red-700">Redeem Your Tokens</h1>
         <p className="text-gray-700 mt-2">
           Balance: <strong>{tokenBalance}</strong> tokens
         </p>
-        <p className="text-sm text-gray-500">
-          Welcome, {userData.username}
-        </p>
+        {userData && (
+          <p className="text-sm text-gray-500">
+            Welcome back, {userData.username || userData.email}!
+          </p>
+        )}
       </div>
 
       {/* Ad Section */}
@@ -315,6 +380,11 @@ const RedeemPage: React.FC = () => {
           <div>
             <h3 className="font-semibold text-gray-800">🎥 Watch Ad for Free Tokens</h3>
             <p className="text-sm text-gray-600">Earn 5-10 tokens every 8 hours</p>
+            {lastAdWatch && (
+              <p className="text-xs text-gray-500 mt-1">
+                Last watched: {new Date(lastAdWatch).toLocaleString()}
+              </p>
+            )}
           </div>
           <div>
             {canWatchAd() ? (
@@ -329,7 +399,8 @@ const RedeemPage: React.FC = () => {
               <div className="text-center">
                 <ClockIcon className="w-6 h-6 text-gray-400 mx-auto mb-1" />
                 <p className="text-xs text-gray-500">
-                  Next ad in: {getNextAdTime()?.toLocaleTimeString()}
+                  Next ad available at:<br />
+                  {getNextAdTime()?.toLocaleTimeString()}
                 </p>
               </div>
             )}
@@ -345,7 +416,7 @@ const RedeemPage: React.FC = () => {
             ? <CheckCircleIcon className="w-6 text-green-500" />
             : <XCircleIcon className="w-6 text-red-500" />
           }
-          <span>{notification.message}</span>
+          <span className="flex-1">{notification.message}</span>
         </div>
       )}
 
@@ -384,7 +455,7 @@ const RedeemPage: React.FC = () => {
       {/* Redeemed Perks Section */}
       {redeemedPerks.length > 0 && (
         <div className="max-w-4xl mx-auto mt-12">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Your Redeemed Perks</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Your Active Perks</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {redeemedPerks.map((perkId) => {
               const perk = ALL_PERKS.find(p => p.id === perkId);
@@ -398,7 +469,7 @@ const RedeemPage: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold text-green-800">{perk.name}</h3>
-                      <p className="text-sm text-green-600">✅ Redeemed</p>
+                      <p className="text-sm text-green-600">✅ Active</p>
                     </div>
                   </div>
                 </div>
