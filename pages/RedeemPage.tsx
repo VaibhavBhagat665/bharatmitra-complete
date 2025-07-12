@@ -1,17 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { CheckCircleIcon, XCircleIcon, PlayIcon, ClockIcon, DocumentTextIcon, AcademicCapIcon, BellIcon, UserIcon, CalendarDaysIcon, BookOpenIcon, PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { UserContext } from './UserContext';
 
-// Mock UserContext for demonstration
-const UserContext = React.createContext({
-  tokenBalance: 150,
-  redeemPerk: async (id: string, price: number) => true,
-  user: { email: 'user@example.com' },
-  userData: { username: 'John Doe', email: 'user@example.com' },
-  rewardTokens: async (tokens: number, reason: string) => true,
-  refreshUserData: () => {}
-});
-
-// Define your Perk type inline
 type Perk = {
   id: string;
   name: string;
@@ -22,7 +12,6 @@ type Perk = {
   isWorking?: boolean;
 };
 
-// Create 15+ perks with 3 working ones
 const ALL_PERKS: Perk[] = [
   // Premium
   { id: 'premium-1', name: 'Premium Scheme Access', description: 'Unlock detailed guides & calculators.', price: 60, icon: () => <>🏆</>, category: 'Premium' },
