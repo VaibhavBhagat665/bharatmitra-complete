@@ -39,7 +39,7 @@ const content = {
     title: 'Welcome to Bharat Mitra',
     subtitle: 'Your trusted AI assistant for navigating Indian government schemes. Ask in your English/Hindi and get clear answers about scholarships, farmer support, and citizen benefits.',
     startChatButton: 'Start Asking Questions',
-    benefitsButton: 'View Recommended Benefits',
+    downloadMobileButton: 'Download for Mobile',
     studentsTitle: '🎓 For Students',
     studentsDesc: 'Find scholarships, educational loans, and skill development programs tailored for you.',
     farmersTitle: '🌾 For Farmers',
@@ -104,7 +104,7 @@ const content = {
     title: 'भारत मित्र में आपका स्वागत है',
     subtitle: 'भारतीय सरकारी योजनाओं के लिए आपका विश्वसनीय AI सहायक। हिंदी/अंग्रेजी में पूछें और छात्रवृत्ति, किसान सहायता और नागरिक लाभों के बारे में स्पष्ट उत्तर पाएं।',
     startChatButton: 'सवाल पूछना शुरू करें',
-    benefitsButton: 'सुझाई गई योजनाएं देखें',
+    downloadMobileButton: 'मोबाइल के लिए डाउनलोड करें',
     studentsTitle: '🎓 छात्रों के लिए',
     studentsDesc: 'आपके लिए उपयुक्त छात्रवृत्ति, शैक्षणिक ऋण और कौशल विकास कार्यक्रम खोजें।',
     farmersTitle: '🌾 किसानों के लिए',
@@ -194,6 +194,14 @@ const HomePage: React.FC = () => {
     'https://www.pmindia.gov.in/hi/government_tr_rec/%E0%A4%AC%E0%A5%87%E0%A4%9F%E0%A5%80-%E0%A4%AC%E0%A4%9A%E0%A4%BE%E0%A4%93-%E0%A4%AC%E0%A5%87%E0%A4%9F%E0%A5%80-%E0%A4%AA%E0%A4%A2%E0%A4%BC%E0%A4%BE%E0%A4%93-%E0%A4%AC%E0%A4%BE%E0%A4%B2/',
   ];
 
+  // Function to handle APK download
+  const handleDownloadAPK = () => {
+    const link = document.createElement('a');
+    link.href = '/bharat-mitra.apk'; 
+    link.download = 'bharat-mitra.apk';
+    link.click();
+  };
+
   return (
     <>
       {/* 🔹 Background Video Section */}
@@ -230,12 +238,13 @@ const HomePage: React.FC = () => {
             >
               {currentContent.startChatButton}
             </Link>
-            <Link
-              to="/benefits"
-              className="bg-bharat-saffron-500 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-bharat-saffron-600 transform hover:scale-105 transition-all shadow-lg"
+            <button
+              onClick={handleDownloadAPK}
+              className="bg-bharat-saffron-500 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-bharat-saffron-600 transform hover:scale-105 transition-all shadow-lg flex items-center gap-2"
             >
-              {currentContent.benefitsButton}
-            </Link>
+              <span>📱</span>
+              {currentContent.downloadMobileButton}
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left animate-fade-in-up delay-500 mb-16 text-black">
