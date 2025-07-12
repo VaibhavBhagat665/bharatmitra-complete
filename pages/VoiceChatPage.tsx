@@ -10,7 +10,7 @@ import ChatMessage from '../components/ChatMessage';
 const VoiceChatPage: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
-  const { addTokens, language, setLanguage } = useContext(UserContext); // Use language from context
+  const { addTokens, language, setLanguage } = useContext(UserContext);
   const { 
     isListening, 
     transcript, 
@@ -42,7 +42,7 @@ const VoiceChatPage: React.FC = () => {
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      // Use the context language instead of detected language
+      // Use the context language for AI response
       const aiResponseText = await getSchemeAdvice(query, language);
       
       const aiMessage: ChatMessageType = {
@@ -55,9 +55,11 @@ const VoiceChatPage: React.FC = () => {
       setMessages(prev => [...prev, aiMessage]);
       
       // Auto-play the AI response with the selected language from context
+      // Add a longer delay to ensure the message is rendered
       setTimeout(() => {
+        console.log('About to play AI response in language:', language);
         togglePlayPause(aiResponseText, aiMessage.id, language);
-      }, 300);
+      }, 500);
       
     } catch (error) {
       console.error('Error fetching AI response:', error);
@@ -74,6 +76,11 @@ const VoiceChatPage: React.FC = () => {
       };
       
       setMessages(prev => [...prev, errorMessage]);
+      
+      // Also play error message
+      setTimeout(() => {
+        togglePlayPause(errorText, errorMessage.id, language);
+      }, 500);
     } finally {
       setIsProcessingAI(false);
       resetSession();
@@ -291,6 +298,16 @@ const VoiceChatPage: React.FC = () => {
             }
           </p>
         </div>
+
+        {/* Debug Info - Remove in production */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-4 bg-gray-100 rounded-lg p-4 text-sm text-gray-700">
+            <p><strong>Debug Info:</strong></p>
+            <p>Selected Language: {language}</p>
+            <p>Is Playing: {isPlaying ? 'Yes' : 'No'}</p>
+            <p>Available Voices: {window.speechSynthesis?.getVoices().length || 0}</p>
+          </div>
+        )}
       </div>
     </div>
   );
