@@ -7,8 +7,7 @@
 
 ## 🌐 Live Demo
 
-🎯 [**Access Bharat Mitra Now**](https://your-deployed-link.com)  
-_(Mobile-friendly. No login required.)_
+🎯 [**Access Bharat Mitra Now**](https://bharatmitra-complete.vercel.app/)  
 
 ---
 
@@ -41,18 +40,18 @@ The app is:
 
 ## ⚙️ Tech Stack
 
-| Layer         | Technology                                                                                     | Purpose                                        |
-|---------------|------------------------------------------------------------------------------------------------|------------------------------------------------|
-| 💻 Frontend    | [React](https://reactjs.org/) + [TypeScript](https://www.typescriptlang.org/)                  | Building responsive and component-based UI     |
-| ⚡ Build Tool  | [Vite](https://vitejs.dev/)                                                                    | Fast dev server and build process              |
-| 🎨 Styling     | [Tailwind CSS](https://tailwindcss.com/)                                                       | Utility-first responsive CSS                   |
-| 🟢 Backend     | ![Node.js](https://img.shields.io/badge/-Node.js-339933?logo=node.js&logoColor=white)         | Handles backend logic and environment setup    |
-| 🚏 Express     | ![Express](https://img.shields.io/badge/-Express.js-000000?logo=express&logoColor=white)      | Minimal routing and API endpoint (e.g., payment) |
-| 🔥 Database    | [Firebase Firestore](https://firebase.google.com/products/firestore)                           | NoSQL cloud database for schemes & data        |
-| 🔐 Auth (WIP)  | [Firebase Auth](https://firebase.google.com/products/auth)                                     | Handles optional user login                    |
-| 🌍 Hosting     | [Firebase Hosting](https://firebase.google.com/products/hosting)                               | Deploys the app to a fast global CDN           |
-| 🧩 UI & Icons  | [Lucide](https://lucide.dev/), [Heroicons](https://heroicons.com/)                             | Beautiful, consistent icons                    |
-| 🎉 UX Effects  | [React Confetti](https://www.npmjs.com/package/react-confetti)                                 | Interactive visual celebration                 |
+| Layer         | Tech Stack                                                                                      | Purpose                                        |
+|---------------|--------------------------------------------------------------------------------------------------|------------------------------------------------|
+| 💻 Frontend    | ![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB) + ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white) | Component-based UI with strong typing          |
+| ⚡ Build Tool  | ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)          | Lightning-fast dev/build setup                 |
+| 🎨 Styling     | ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white) | Utility-first responsive styling               |
+| 🟢 Backend     | ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white) | JS runtime used for backend routing and APIs   |
+| 🚏 Express     | ![Express](https://img.shields.io/badge/Express.js-000000?style=flat&logo=express&logoColor=white) | Lightweight backend route handler              |
+| 🔥 Database    | ![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=white) | Firestore used for real-time NoSQL data        |
+| 🔐 Auth        | ![Firebase Auth](https://img.shields.io/badge/Auth-Firebase-FFCA28?style=flat&logo=firebase&logoColor=white) | (Optional) Secure login system                 |
+| 🌍 Hosting     | ![Firebase Hosting](https://img.shields.io/badge/Hosting-Firebase-FFCA28?style=flat&logo=firebase&logoColor=white) | Production hosting for frontend                |
+| 🧩 Icons & UI  | ![Lucide](https://img.shields.io/badge/Lucide-000000?style=flat&logo=lucide&logoColor=white) ![Heroicons](https://img.shields.io/badge/Heroicons-000000?style=flat&logo=heroicons&logoColor=white) | Clean, open-source icon sets                   |
+| 🎉 FX & UX     | ![React Confetti](https://img.shields.io/badge/Confetti-React-blue?style=flat)                 | Fun celebratory animation on success events    |
 
 ---
 
