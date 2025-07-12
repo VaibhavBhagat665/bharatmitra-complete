@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AshokaChakraIcon } from '../components/icons/AshokaChakraIcon';
 import { useUser } from '../contexts/UserContext';
+import apkFile from '/bharat-mitra.apk';
 
 const testimonials = {
   en: [
@@ -195,11 +196,46 @@ const HomePage: React.FC = () => {
   ];
 
   // Function to handle APK download
-  const handleDownloadAPK = () => {
-    const link = document.createElement('a');
-    link.href = '/bharat-mitra.apk'; 
-    link.download = 'bharat-mitra.apk';
-    link.click();
+  const handleDownloadAPK = async () => {
+    try {
+      // Method 1: Use imported APK file
+      const link = document.createElement('a');
+      link.href = apkFile;
+      link.download = 'bharat-mitra.apk';
+      link.setAttribute('type', 'application/vnd.android.package-archive');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+    } catch (error) {
+      console.error('Download failed:', error);
+      
+      // Method 2: Fallback to direct URL
+      try {
+        const response = await fetch('/bharat-mitra.apk');
+        
+        if (!response.ok) {
+          alert('APK file not found. Please make sure the file is placed in the public folder.');
+          return;
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'bharat-mitra.apk';
+        link.setAttribute('type', 'application/vnd.android.package-archive');
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+      } catch (fallbackError) {
+        console.error('Fallback download failed:', fallbackError);
+        alert('Download failed. Please try again or contact support.');
+      }
+    }
   };
 
   return (
