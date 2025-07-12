@@ -48,7 +48,7 @@ The app is:
 | 🟢 Backend     | ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white) | JS runtime used for backend routing and APIs   |
 | 🚏 Express     | ![Express](https://img.shields.io/badge/Express.js-000000?style=flat&logo=express&logoColor=white) | Lightweight backend route handler              |
 | 🔥 Database    | ![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=white) | Firestore used for real-time NoSQL data        |
-| 🔐 Auth        | ![Firebase Auth](https://img.shields.io/badge/Auth-Firebase-FFCA28?style=flat&logo=firebase&logoColor=white) | (Optional) Secure login system                 |
+| 🔐 Auth        | ![Firebase Auth](https://img.shields.io/badge/Auth-Firebase-FFCA28?style=flat&logo=firebase&logoColor=white) | Secure login system                 |
 | 🌍 Hosting     | ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat&logo=vercel&logoColor=white) | Production hosting for frontend                |
 | 🧩 Icons & UI  | ![Lucide](https://img.shields.io/badge/Lucide-000000?style=flat&logo=lucide&logoColor=white) ![Heroicons](https://img.shields.io/badge/Heroicons-000000?style=flat&logo=heroicons&logoColor=white) | Clean, open-source icon sets                   |
 | 🎉 FX & UX     | ![React Confetti](https://img.shields.io/badge/Confetti-React-blue?style=flat)                 | Fun celebratory animation on success events    |
