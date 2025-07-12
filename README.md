@@ -87,11 +87,12 @@ Bharat Mitra makes discovering relevant schemes as easy as using a shopping app 
 
 ## 🙋‍♂️ Built By
 
-**Hackstreet Boys** Vaibhav Bhagat 
+**Hackstreet Boys:**
+- Vaibhav Bhagat 
 🔗 [LinkedIn](https://linkedin.com/in/vaibhavbhagat5) 
-Harsh Munjal 
+- Harsh Munjal 
 🔗 [LinkedIn](https://linkedin.com/in/harsh-munjal-824297253) 
-Rohit Yadav 
+- Rohit Yadav 
 🔗 [LinkedIn](https://linkedin.com/in/rohityadav1234)
 
 ---
