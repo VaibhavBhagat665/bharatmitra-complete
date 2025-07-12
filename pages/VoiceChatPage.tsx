@@ -14,7 +14,6 @@ const VoiceChatPage: React.FC = () => {
   const { 
     isListening, 
     transcript, 
-    detectedLanguage, // Use the detected language from speech recognition
     error: recognitionError,
     isComplete,
     startListening,
@@ -22,16 +21,36 @@ const VoiceChatPage: React.FC = () => {
     resetSession
   } = useSpeechRecognition();
   
-  const { isPlaying, togglePlayPause } = useTextToSpeech();
+  const { isPlaying, togglePlayPause, cancel: cancelTTS, testTTS, availableVoices } = useTextToSpeech();
   const chatEndRef = useRef<HTMLDivElement>(null);
   const processedTranscriptRef = useRef<string>('');
+  const autoPlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleAiResponse = useCallback(async (query: string, userLanguage: 'en' | 'hi') => {
+  // Debug voice information
+  useEffect(() => {
+    console.log('Available voices count:', availableVoices.length);
+    const hindiVoices = availableVoices.filter(v => 
+      v.lang.includes('hi') || v.name.toLowerCase().includes('hindi')
+    );
+    const englishVoices = availableVoices.filter(v => 
+      v.lang.includes('en')
+    );
+    console.log('Hindi voices:', hindiVoices.map(v => ({ name: v.name, lang: v.lang })));
+    console.log('English voices:', englishVoices.map(v => ({ name: v.name, lang: v.lang })));
+  }, [availableVoices]);
+
+  const handleAiResponse = useCallback(async (query: string) => {
     if (!query.trim() || isProcessingAI || query === processedTranscriptRef.current) return;
     
-    console.log('Processing AI response for:', query, 'in detected language:', userLanguage);
+    console.log('Processing AI response for:', query, 'in language:', language);
     processedTranscriptRef.current = query;
     setIsProcessingAI(true);
+
+    // Clear any existing auto-play timeout
+    if (autoPlayTimeoutRef.current) {
+      clearTimeout(autoPlayTimeoutRef.current);
+      autoPlayTimeoutRef.current = null;
+    }
 
     const userMessage: ChatMessageType = {
       id: `user-${Date.now()}-${Math.random()}`,
@@ -43,8 +62,8 @@ const VoiceChatPage: React.FC = () => {
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      // Use the detected language for AI response
-      const aiResponseText = await getSchemeAdvice(query, userLanguage);
+      // Use the context language instead of detected language
+      const aiResponseText = await getSchemeAdvice(query, language);
       
       const aiMessage: ChatMessageType = {
         id: `ai-${Date.now()}-${Math.random()}`,
@@ -55,17 +74,22 @@ const VoiceChatPage: React.FC = () => {
       
       setMessages(prev => [...prev, aiMessage]);
       
-      // Auto-play the AI response with the detected language
-      setTimeout(() => {
-        console.log('Playing TTS with language:', userLanguage);
-        togglePlayPause(aiResponseText, aiMessage.id, userLanguage);
-      }, 300);
+      // Auto-play the AI response with better timing and error handling
+      autoPlayTimeoutRef.current = setTimeout(() => {
+        console.log('Auto-playing AI response in language:', language);
+        console.log('Response text:', aiResponseText.substring(0, 100) + '...');
+        
+        try {
+          togglePlayPause(aiResponseText, aiMessage.id, language);
+        } catch (error) {
+          console.error('Error auto-playing AI response:', error);
+        }
+      }, 500); // Increased delay to ensure UI is ready
       
     } catch (error) {
       console.error('Error fetching AI response:', error);
       
-      // Use detected language for error message
-      const errorText = userLanguage === 'hi' 
+      const errorText = language === 'hi' 
         ? 'माफ करें, कुछ गलत हुआ। फिर से कोशिश करें।'
         : 'Sorry, something went wrong. Please try again.';
         
@@ -77,29 +101,32 @@ const VoiceChatPage: React.FC = () => {
       };
       
       setMessages(prev => [...prev, errorMessage]);
-      
-      // Also play error message with detected language
-      setTimeout(() => {
-        togglePlayPause(errorText, errorMessage.id, userLanguage);
-      }, 300);
     } finally {
       setIsProcessingAI(false);
       resetSession();
       processedTranscriptRef.current = '';
     }
-  }, [addTokens, togglePlayPause, isProcessingAI, resetSession]);
+  }, [addTokens, togglePlayPause, isProcessingAI, resetSession, language]);
 
   useEffect(() => {
     if (isComplete && transcript.trim() && !isProcessingAI) {
-      console.log('Speech complete, processing:', transcript, 'Detected language:', detectedLanguage);
-      // Use detected language instead of context language
-      handleAiResponse(transcript, detectedLanguage);
+      console.log('Speech complete, processing:', transcript, 'Using context language:', language);
+      handleAiResponse(transcript);
     }
-  }, [isComplete, transcript, detectedLanguage, handleAiResponse, isProcessingAI]);
+  }, [isComplete, transcript, handleAiResponse, isProcessingAI, language]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Clean up timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (autoPlayTimeoutRef.current) {
+        clearTimeout(autoPlayTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleMicClick = () => {
     if (isProcessingAI) return;
@@ -107,11 +134,27 @@ const VoiceChatPage: React.FC = () => {
     if (isListening) {
       stopListening();
     } else {
+      // Cancel any ongoing TTS before starting to listen
       if (isPlaying) {
-        window.speechSynthesis?.cancel();
+        cancelTTS();
       }
       startListening();
     }
+  };
+
+  const handleLanguageChange = (newLanguage: 'en' | 'hi') => {
+    console.log('Language changed to:', newLanguage);
+    setLanguage(newLanguage);
+    
+    // Cancel any ongoing TTS when language changes
+    if (isPlaying) {
+      cancelTTS();
+    }
+    
+    // Test TTS with the new language
+    setTimeout(() => {
+      testTTS(newLanguage);
+    }, 1000);
   };
 
   const getButtonState = () => {
@@ -162,7 +205,7 @@ const VoiceChatPage: React.FC = () => {
             </span>
             <div className="flex bg-white rounded-full p-1 shadow-md border border-gray-200">
               <button
-                onClick={() => setLanguage('en')}
+                onClick={() => handleLanguageChange('en')}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                   language === 'en'
                     ? 'bg-blue-500 text-white shadow-sm'
@@ -172,7 +215,7 @@ const VoiceChatPage: React.FC = () => {
                 English
               </button>
               <button
-                onClick={() => setLanguage('hi')}
+                onClick={() => handleLanguageChange('hi')}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                   language === 'hi'
                     ? 'bg-blue-500 text-white shadow-sm'
@@ -184,9 +227,27 @@ const VoiceChatPage: React.FC = () => {
             </div>
           </div>
           
-          {transcript && (
-            <div className="mt-3 inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
-              🗣️ {language === 'hi' ? 'सुना गया:' : 'Heard:'} {detectedLanguage === 'hi' ? 'हिंदी' : 'English'}
+          {/* Voice Status */}
+          <div className="mt-3 flex items-center justify-center space-x-4">
+            {transcript && (
+              <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                🗣️ {language === 'hi' ? 'सुना गया:' : 'Heard:'} {language === 'hi' ? 'हिंदी' : 'English'}
+              </div>
+            )}
+            
+            {isPlaying && (
+              <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200">
+                🔊 {language === 'hi' ? 'बोल रहा है...' : 'Speaking...'}
+              </div>
+            )}
+          </div>
+
+          {/* Debug Info (only in development) */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-2 text-xs text-gray-500">
+              Voices: {availableVoices.length} | 
+              Hindi: {availableVoices.filter(v => v.lang.includes('hi')).length} | 
+              English: {availableVoices.filter(v => v.lang.includes('en')).length}
             </div>
           )}
         </div>
@@ -248,7 +309,7 @@ const VoiceChatPage: React.FC = () => {
                     <p className="text-blue-800 text-sm font-medium mb-1">
                       {language === 'hi' ? 'आपका संदेश:' : 'Your Message:'}
                       <span className="ml-2 text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">
-                        {detectedLanguage === 'hi' ? 'हिंदी' : 'English'}
+                        {language === 'hi' ? 'हिंदी' : 'English'}
                       </span>
                     </p>
                     <p className="text-blue-900 text-lg leading-relaxed">{transcript}</p>
@@ -295,8 +356,8 @@ const VoiceChatPage: React.FC = () => {
         <div className="mt-6 bg-white/50 rounded-lg p-4 text-center">
           <p className="text-gray-600">
             {language === 'hi' 
-              ? '💡 सुझाव: आप जिस भाषा में बोलते हैं, चैटबॉट उसी भाषा में जवाब देगा। भाषा स्वतः पहचानी जाएगी।'
-              : '💡 Tip: The chatbot will respond in the same language you speak. Language is automatically detected.'
+              ? '💡 सुझाव: ऊपर दिए गए भाषा टॉगल से अपनी पसंदीदा भाषा चुनें। चैटबॉट उसी भाषा में जवाब देगा।'
+              : '💡 Tip: Use the language toggle above to select your preferred language. The chatbot will respond in the same language.'
             }
           </p>
         </div>
