@@ -14,7 +14,6 @@ const LeaderboardPage: React.FC = () => {
     loading: userLoading 
   } = useUser();
   
-  const [timeFilter, setTimeFilter] = useState<'all' | 'week' | 'month'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'students' | 'professionals'>('all');
   const [showUserCard, setShowUserCard] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -257,23 +256,6 @@ const LeaderboardPage: React.FC = () => {
       {/* Filters */}
       <div className="flex flex-wrap gap-4 mb-6">
         <div className="flex gap-2">
-          <span className="text-sm text-gray-600 self-center">Time:</span>
-          {(['all', 'week', 'month'] as const).map(filter => (
-            <button
-              key={filter}
-              onClick={() => setTimeFilter(filter)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                timeFilter === filter
-                  ? 'bg-red-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex gap-2">
           <span className="text-sm text-gray-600 self-center">Category:</span>
           {(['all', 'students', 'professionals'] as const).map(filter => (
             <button
@@ -296,9 +278,8 @@ const LeaderboardPage: React.FC = () => {
         <div className="bg-gradient-to-r from-red-50 to-pink-50 px-6 py-4 border-b border-gray-200">
           <div className="grid grid-cols-12 gap-4 text-left font-bold text-sm text-gray-700 uppercase tracking-wider">
             <span className="col-span-1">Rank</span>
-            <span className="col-span-4">User</span>
-            <span className="col-span-2">Badge</span>
-            <span className="col-span-2">Level</span>
+            <span className="col-span-5">User</span>
+            <span className="col-span-3">Level</span>
             <span className="col-span-3 text-right">Tokens</span>
           </div>
         </div>
@@ -337,27 +318,18 @@ const LeaderboardPage: React.FC = () => {
                     </div>
 
                     {/* User Info */}
-                    <div className="col-span-4">
+                    <div className="col-span-5">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
                           {(leaderUser.username || 'U').charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-gray-900">
-                              {leaderUser.username || 'Anonymous'}
-                              {isCurrentUser && (
-                                <span className="text-blue-600 text-sm ml-1">(You)</span>
-                              )}
-                            </p>
-                            {index < 3 && (
-                              <div className="flex items-center">
-                                {index === 0 && <Crown className="w-4 h-4 text-yellow-500" />}
-                                {index === 1 && <Trophy className="w-4 h-4 text-gray-400" />}
-                                {index === 2 && <Medal className="w-4 h-4 text-amber-600" />}
-                              </div>
+                          <p className="font-semibold text-gray-900">
+                            {leaderUser.username || 'Anonymous'}
+                            {isCurrentUser && (
+                              <span className="text-blue-600 text-sm ml-1">(You)</span>
                             )}
-                          </div>
+                          </p>
                           <p className="text-sm text-gray-500">
                             {leaderUser.occupation || 'Government Scheme Explorer'}
                           </p>
@@ -365,17 +337,8 @@ const LeaderboardPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Badge */}
-                    <div className="col-span-2">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-white ${
-                        getBadgeColor(leaderUser.badge || 'Explorer')
-                      }`}>
-                        {leaderUser.badge || 'Explorer'}
-                      </span>
-                    </div>
-
                     {/* Level */}
-                    <div className="col-span-2">
+                    <div className="col-span-3">
                       <div className="flex items-center gap-2">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
                           getProgressColor(userLevel)
@@ -401,23 +364,6 @@ const LeaderboardPage: React.FC = () => {
                       )}
                     </div>
                   </div>
-
-                  {/* Progress Bar for Top 3 */}
-                  {index < 3 && (
-                    <div className="mt-3 ml-16">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full ${getProgressColor(userLevel)} transition-all duration-500`}
-                          style={{ 
-                            width: `${Math.min(100, ((leaderUser.bharat_tokens || 0) % 100))}%` 
-                          }}
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {100 - ((leaderUser.bharat_tokens || 0) % 100)} tokens to next level
-                      </p>
-                    </div>
-                  )}
                 </div>
               );
             })
