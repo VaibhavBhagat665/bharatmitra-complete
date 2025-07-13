@@ -1,4 +1,5 @@
 # Bharat Mitra
+![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)
 
 > **A digital bridge between citizens and the government.**  
 > Discover welfare schemes in seconds — tailored to you, accessible to all.
