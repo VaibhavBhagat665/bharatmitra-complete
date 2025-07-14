@@ -196,7 +196,7 @@ const HomePage: React.FC = () => {
 
   // Function to handle APK download
  const handleDownloadAPK = () => {
-  window.open('https://drive.google.com/uc?export=download&id=1uek-TtWhy0p3MxLcx1ke44qtgsYAT4Ct', '_blank');
+  window.open('https://drive.google.com/uc?export=download&id=1m15TQF-YylzlK4yK0y2iCQLp8qQbsaJ3', '_blank');
 };
 
   return (
