@@ -8,7 +8,8 @@ const { db, auth, admin } = require('./firebaseAdmin');
 const app = express();
 const port = process.env.PORT || 8080;
 
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000' }));
+const clientOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : ['http://localhost:5173','http://localhost:3000'];
+app.use(cors({ origin: clientOrigins }));
 app.use(express.json());
 
 // Auth middleware
@@ -186,6 +187,93 @@ app.post('/api/redeem-perk', checkAuth, async (req, res) => {
     }
 });
 
+app.post('/api/llm/answer', async (req, res) => {
+    try {
+        const { query, lang, system_instruction, urls } = req.body || {};
+        if (!query || typeof query !== 'string') {
+            return res.status(400).json({ error: 'Missing query' });
+        }
+
+        const HF_API_TOKEN = process.env.HUGGING_FACE_API_TOKEN || process.env.HF_TOKEN;
+        const HF_MODEL_ID = process.env.HF_MODEL_ID || 'google/gemma-2-2b-it';
+        if (!HF_API_TOKEN) {
+            return res.status(500).json({ error: 'LLM not configured' });
+        }
+
+        const safeUrls = Array.isArray(urls) ? urls.filter(u => /^https?:\/\//i.test(u)).slice(0, 3) : [];
+        let contextText = '';
+        for (const u of safeUrls) {
+            try {
+                const r = await fetch(u, { headers: { 'User-Agent': 'BharatMitraBot/1.0' } });
+                const html = await r.text();
+                const cleaned = html
+                    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+                    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+                    .replace(/<[^>]+>/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .slice(0, 5000);
+                contextText += `\n\nSource: ${u}\n${cleaned}`;
+            } catch (e) { /* ignore per-URL errors */ }
+        }
+
+        const instruction = (typeof system_instruction === 'string' && system_instruction.trim().length > 0)
+            ? system_instruction
+            : `You are a helpful assistant for Indian government schemes. Reply in ${lang === 'hi' ? 'Hindi (Devanagari)' : 'English'} with simple, factual information.`;
+
+        const inputs = `${instruction}\n\n${contextText ? 'Use the following source excerpts to answer accurately:\n' + contextText + '\n\n' : ''}User question: ${query}\nAnswer:`;
+
+        const hfRes = await fetch(`https://api-inference.huggingface.co/models/${encodeURIComponent(HF_MODEL_ID)}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${HF_API_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                inputs,
+                parameters: {
+                    max_new_tokens: 600,
+                    temperature: 0.3,
+                    return_full_text: false
+                }
+            })
+        });
+
+        if (hfRes.status === 503) {
+            const data = await hfRes.json().catch(() => ({}));
+            return res.status(503).json({ error: 'Model loading, try again', details: data });
+        }
+
+        if (!hfRes.ok) {
+            const text = await hfRes.text().catch(() => '');
+            return res.status(500).json({ error: 'LLM request failed', details: text });
+        }
+
+        const data = await hfRes.json();
+        let textOut = '';
+        if (Array.isArray(data) && data[0]?.generated_text) {
+            textOut = data[0].generated_text;
+        } else if (typeof data?.generated_text === 'string') {
+            textOut = data.generated_text;
+        } else if (typeof data === 'string') {
+            textOut = data;
+        } else {
+            textOut = JSON.stringify(data);
+        }
+
+        textOut = textOut
+            .replace(/\*\*(.*?)\*\*/g, '$1')
+            .replace(/\*(.*?)\*/g, '$1')
+            .replace(/__(.*?)__/g, '$1')
+            .replace(/`(.*?)`/g, '$1')
+            .replace(/#{1,6}\s/g, '')
+            .trim();
+
+        res.json({ text: textOut });
+    } catch (err) {
+        res.status(500).json({ error: 'Internal error' });
+    }
+});
 
 app.listen(port, () => {
     console.log(`Bharat Mitra server listening on port ${port}`);

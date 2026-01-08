@@ -1,12 +1,6 @@
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-
-const API_KEY = process.env.API_KEY;
-
-if (!API_KEY) {
-  console.error("API_KEY environment variable not set. Using placeholder response.");
-}
-
-const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+const BASE_URL = (typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost')
+  ? (import.meta as any).env?.VITE_SERVER_URL || 'http://localhost:8080'
+  : '';
 
 // Keyword mapping for scheme identification
 const SCHEME_KEYWORDS = {
@@ -96,12 +90,38 @@ const SCHEME_KEYWORDS = {
   }
 };
 
+const detectCategories = (query: string, lang: 'en' | 'hi'): string[] => {
+  const q = query.toLowerCase();
+  const cats: string[] = [];
+  Object.entries(SCHEME_KEYWORDS).forEach(([cat, data]: any) => {
+    const keywords = data[lang] || data.en;
+    if (keywords.some((kw: string) => q.includes(kw.toLowerCase()))) cats.push(cat);
+  });
+  return [...new Set(cats)];
+};
+
+const getReferenceUrls = (query: string, lang: 'en' | 'hi'): string[] => {
+  const categories = detectCategories(query, lang);
+  const urls: string[] = [];
+  urls.push(`https://www.myscheme.gov.in/search?query=${encodeURIComponent(query)}`);
+  const add = (...u: string[]) => u.forEach(x => { if (x && !urls.includes(x)) urls.push(x); });
+  if (categories.includes('education')) add('https://scholarships.gov.in/', 'https://www.vidyalakshmi.co.in/Students/');
+  if (categories.includes('agriculture')) add('https://pmkisan.gov.in/', 'https://pmfby.gov.in/');
+  if (categories.includes('women')) add('https://wcd.nic.in/', 'https://wcd.nic.in/bbbp-scheme');
+  if (categories.includes('health')) add('https://pmjay.gov.in/', 'https://nhp.gov.in/');
+  if (categories.includes('employment')) add('https://nrega.nic.in/', 'https://www.pmkvyofficial.org/');
+  if (categories.includes('housing')) add('https://pmay-urban.gov.in/', 'https://pmayg.nic.in/');
+  if (categories.includes('loan')) add('https://www.mudra.org.in/', 'https://www.standupmitra.in/');
+  if (categories.includes('senior')) add('https://nsap.nic.in/');
+  return urls.slice(0, 3);
+};
+
 // Function to identify relevant schemes based on keywords
 const identifyRelevantSchemes = (query: string, lang: 'en' | 'hi'): string[] => {
   const queryLower = query.toLowerCase();
   const relevantSchemes: string[] = [];
 
-  Object.entries(SCHEME_KEYWORDS).forEach(([category, data]) => {
+  Object.entries(SCHEME_KEYWORDS).forEach(([_, data]) => {
     const keywords = data[lang] || data.en;
     const hasKeyword = keywords.some(keyword => 
       queryLower.includes(keyword.toLowerCase())
@@ -232,128 +252,38 @@ How can I assist you today?`;
 };
 
 export const getSchemeAdvice = async (query: string, lang: 'en' | 'hi'): Promise<string> => {
-  if (!ai) {
-    const mockResponse = lang === 'hi'
-      ? "यह एक मॉक प्रतिक्रिया है क्योंकि एपीआई कुंजी कॉन्फ़िगर नहीं है। वास्तविक परिदृश्य में, मैं आपके द्वारा मांगी गई योजना के बारे में विस्तृत जानकारी प्रदान करूंगा।"
-      : "This is a mock response as the API key is not configured. In a real scenario, I would provide detailed information about the scheme you asked for.";
-    return new Promise(resolve => setTimeout(() => resolve(mockResponse), 1000));
-  }
-  
   try {
-    // Identify relevant schemes and check if query is unclear
     const relevantSchemes = identifyRelevantSchemes(query, lang);
     const isUnclear = isQueryUnclear(query, lang);
-    
-    // If query is too unclear, return fallback response
     if (isUnclear && relevantSchemes.length === 0) {
       return getFallbackResponse(lang);
     }
-    
-    // Try the newer API format first
-    try {
-      const model = ai.getGenerativeModel({ 
-        model: 'gemini-2.0-flash-exp',
-        systemInstruction: getSystemInstruction(lang, relevantSchemes, isUnclear)
-      });
-      
-      const response = await model.generateContent({
-        contents: [{
-          role: 'user',
-          parts: [{ text: query }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          topP: 0.8,
-          topK: 40,
-          maxOutputTokens: 1000,
-        }
-      });
-      
-      let responseText = '';
-      
-      // Handle different response formats
-      if (response.response?.text) {
-        responseText = await response.response.text();
-      } else if (response.response?.candidates?.[0]?.content?.parts?.[0]?.text) {
-        responseText = response.response.candidates[0].content.parts[0].text;
-      } else {
-        throw new Error('Invalid response format from new API');
+
+    const body = {
+      query,
+      lang,
+      system_instruction: getSystemInstruction(lang, relevantSchemes, isUnclear),
+      urls: getReferenceUrls(query, lang)
+    };
+
+    const endpoint = `${BASE_URL}/api/llm/answer`;
+    const r = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) {
+      if (r.status === 503) {
+        return lang === 'hi'
+          ? 'मॉडल लोड हो रहा है। कृपया कुछ देर बाद फिर कोशिश करें।'
+          : 'Model is loading. Please try again shortly.';
       }
-      
-      // Clean up any markdown formatting
-      const cleanedResponse = responseText
-        .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove bold
-        .replace(/\*(.*?)\*/g, '$1')      // Remove italics
-        .replace(/__(.*?)__/g, '$1')      // Remove underline
-        .replace(/`(.*?)`/g, '$1')        // Remove code formatting
-        .replace(/#{1,6}\s/g, '')         // Remove headers
-        .trim();
-      
-      return cleanedResponse;
-      
-    } catch (newApiError) {
-      console.warn('New API format failed, trying legacy format:', newApiError);
-      
-      // Fallback to legacy API format
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash-exp',
-        contents: query,
-        config: {
-          systemInstruction: getSystemInstruction(lang, relevantSchemes, isUnclear),
-          temperature: 0.3,
-          topP: 0.8,
-          topK: 40,
-          maxOutputTokens: 1000,
-        }
-      });
-      
-      let responseText = '';
-      if (response.text) {
-        responseText = response.text;
-      } else if (response.response?.text) {
-        responseText = response.response.text();
-      } else {
-        throw new Error('Invalid response format from legacy API');
-      }
-      
-      // Clean up any markdown formatting
-      const cleanedResponse = responseText
-        .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove bold
-        .replace(/\*(.*?)\*/g, '$1')      // Remove italics
-        .replace(/__(.*?)__/g, '$1')      // Remove underline
-        .replace(/`(.*?)`/g, '$1')        // Remove code formatting
-        .replace(/#{1,6}\s/g, '')         // Remove headers
-        .trim();
-      
-      return cleanedResponse;
+      return getFallbackResponse(lang);
     }
-    
+    const data = await r.json();
+    const text = (data && typeof data.text === 'string') ? data.text : '';
+    return text && text.trim().length > 0 ? text : getFallbackResponse(lang);
   } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    
-    // More specific error handling
-    if (error.message?.includes('API key') || error.message?.includes('PERMISSION_DENIED')) {
-      return lang === 'hi'
-        ? "एपीआई कुंजी की समस्या है। कृपया व्यवस्थापक से संपर्क करें।"
-        : "API key issue. Please contact the administrator.";
-    }
-    
-    if (error.message?.includes('quota') || error.message?.includes('limit') || error.message?.includes('RESOURCE_EXHAUSTED')) {
-      return lang === 'hi'
-        ? "सेवा की सीमा पार हो गई है। कृपया कुछ देर बाद कोशिश करें।"
-        : "Service limit reached. Please try again later.";
-    }
-    
-    if (error.message?.includes('INVALID_ARGUMENT') || error.message?.includes('model')) {
-      return lang === 'hi'
-        ? "मॉडल कॉन्फ़िगरेशन में समस्या है। कृपया व्यवस्थापक से संपर्क करें।"
-        : "Model configuration issue. Please contact the administrator.";
-    }
-    
-    const errorMessage = lang === 'hi'
-      ? "माफ़ करें, मुझे अपनी जानकारी तक पहुंचने में कुछ समस्या हो रही है। कृपया कुछ देर बाद फिर कोशिश करें।"
-      : "I'm sorry, I'm having trouble accessing my knowledge base right now. Please try again in a moment.";
-    
-    return errorMessage;
+    return getFallbackResponse(lang);
   }
 };
