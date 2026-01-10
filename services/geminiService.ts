@@ -1,6 +1,4 @@
-const BASE_URL = (typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost')
-  ? (import.meta as any).env?.VITE_SERVER_URL || 'http://localhost:8080'
-  : '';
+const BASE_URL = (import.meta as any).env?.VITE_SERVER_URL || '';
 
 // Keyword mapping for scheme identification
 const SCHEME_KEYWORDS = {
@@ -87,6 +85,16 @@ const SCHEME_KEYWORDS = {
       'Indira Gandhi National Old Age Pension Scheme',
       'Senior Citizen Savings Scheme'
     ]
+  },
+  environment: {
+    en: ['environment', 'forest', 'forestry', 'green', 'sustainable', 'sustainability', 'climate', 'renewable', 'solar', 'wind'],
+    hi: ['पर्यावरण', 'वन', 'हरित', 'सतत', 'जलवायु', 'नवीकरणीय', 'सौर', 'पवन'],
+    schemes: [
+      'National Mission for a Green India',
+      'Compensatory Afforestation Fund (CAMPA)',
+      'PM-KUSUM (Solar)',
+      'National Afforestation Programme'
+    ]
   }
 };
 
@@ -113,6 +121,7 @@ const getReferenceUrls = (query: string, lang: 'en' | 'hi'): string[] => {
   if (categories.includes('housing')) add('https://pmay-urban.gov.in/', 'https://pmayg.nic.in/');
   if (categories.includes('loan')) add('https://www.mudra.org.in/', 'https://www.standupmitra.in/');
   if (categories.includes('senior')) add('https://nsap.nic.in/');
+  if (categories.includes('environment')) add('https://moef.gov.in/', 'https://parivesh.nic.in/');
   return urls.slice(0, 3);
 };
 

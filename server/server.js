@@ -223,19 +223,20 @@ app.post('/api/llm/answer', async (req, res) => {
 
         const inputs = `${instruction}\n\n${contextText ? 'Use the following source excerpts to answer accurately:\n' + contextText + '\n\n' : ''}User question: ${query}\nAnswer:`;
 
-        const hfRes = await fetch(`https://api-inference.huggingface.co/models/${encodeURIComponent(HF_MODEL_ID)}`, {
+        const hfRes = await fetch(`https://router.huggingface.co/v1/chat/completions`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${HF_API_TOKEN}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                inputs,
-                parameters: {
-                    max_new_tokens: 600,
-                    temperature: 0.3,
-                    return_full_text: false
-                }
+                model: `${HF_MODEL_ID}:hf-inference`,
+                messages: [
+                    { role: 'system', content: instruction },
+                    { role: 'user', content: query }
+                ],
+                max_tokens: 600,
+                temperature: 0.3
             })
         });
 
@@ -251,12 +252,8 @@ app.post('/api/llm/answer', async (req, res) => {
 
         const data = await hfRes.json();
         let textOut = '';
-        if (Array.isArray(data) && data[0]?.generated_text) {
-            textOut = data[0].generated_text;
-        } else if (typeof data?.generated_text === 'string') {
-            textOut = data.generated_text;
-        } else if (typeof data === 'string') {
-            textOut = data;
+        if (data?.choices?.[0]?.message?.content) {
+            textOut = data.choices[0].message.content;
         } else {
             textOut = JSON.stringify(data);
         }
