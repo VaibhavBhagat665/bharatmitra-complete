@@ -16,10 +16,24 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 WORKDIR /usr/src/app
 
+# Copy root package.json (if needed for shared types, though mostly for frontend)
 COPY package*.json ./
+
+# Copy server package.json specifically
+COPY server/package.json server/package-lock.js* ./server/
+
+# Install root deps (optional, but good for safety)
 RUN npm install
+
+# Install server deps
+WORKDIR /usr/src/app/server
+RUN npm install
+
+# Go back to root
+WORKDIR /usr/src/app
 
 COPY . .
 
 EXPOSE 8080
+# Run from the root, targeting the server script
 CMD [ "node", "server/server.js" ]
