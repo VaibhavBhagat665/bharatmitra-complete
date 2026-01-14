@@ -132,10 +132,10 @@ const identifyRelevantSchemes = (query: string, lang: 'en' | 'hi'): string[] => 
 
   Object.entries(SCHEME_KEYWORDS).forEach(([_, data]) => {
     const keywords = data[lang] || data.en;
-    const hasKeyword = keywords.some(keyword => 
+    const hasKeyword = keywords.some(keyword =>
       queryLower.includes(keyword.toLowerCase())
     );
-    
+
     if (hasKeyword) {
       relevantSchemes.push(...data.schemes);
     }
@@ -147,7 +147,7 @@ const identifyRelevantSchemes = (query: string, lang: 'en' | 'hi'): string[] => 
 // Function to detect if query is unclear or too generic
 const isQueryUnclear = (query: string, lang: 'en' | 'hi'): boolean => {
   const queryLower = query.toLowerCase().trim();
-  
+
   const unclearPatterns = {
     en: ['help', 'hi', 'hello', 'what', 'how', 'tell me', 'info', 'about', 'scheme', 'government'],
     hi: ['मदद', 'हैलो', 'नमस्ते', 'क्या', 'कैसे', 'बताइए', 'जानकारी', 'योजना', 'सरकार']
@@ -155,22 +155,22 @@ const isQueryUnclear = (query: string, lang: 'en' | 'hi'): boolean => {
 
   const patterns = unclearPatterns[lang] || unclearPatterns.en;
   const wordCount = queryLower.split(' ').length;
-  
+
   // Query is unclear if it's too short or only contains generic words
-  return wordCount <= 2 || patterns.every(pattern => 
+  return wordCount <= 2 || patterns.every(pattern =>
     queryLower.includes(pattern) || queryLower === pattern
   );
 };
 
 const getSystemInstruction = (lang: 'en' | 'hi', relevantSchemes: string[] = [], isUnclear: boolean = false) => {
-  const langInstruction = lang === 'hi' ? 
-    'You MUST reply in conversational Hindi using Devanagari script. Do not use any English words except for official scheme names.' : 
+  const langInstruction = lang === 'hi' ?
+    'You MUST reply in conversational Hindi using Devanagari script. Do not use any English words except for official scheme names.' :
     'You MUST reply in simple, conversational English.';
 
-  const schemeContext = relevantSchemes.length > 0 ? 
+  const schemeContext = relevantSchemes.length > 0 ?
     `\n\nRELEVANT SCHEMES TO FOCUS ON: ${relevantSchemes.join(', ')}. Prioritize these schemes in your response if they match the user's query.` : '';
 
-  const unclearQueryGuidance = isUnclear ? 
+  const unclearQueryGuidance = isUnclear ?
     `\n\nThe user's query seems unclear or too generic. Please ask clarifying questions to better understand their needs. For example, ask about their category (student, farmer, woman, senior citizen, etc.) or what type of help they need (financial assistance, loan, scholarship, etc.).` : '';
 
   return `
@@ -263,16 +263,17 @@ How can I assist you today?`;
 export const getSchemeAdvice = async (query: string, lang: 'en' | 'hi'): Promise<string> => {
   try {
     const relevantSchemes = identifyRelevantSchemes(query, lang);
-    const isUnclear = isQueryUnclear(query, lang);
-    if (isUnclear && relevantSchemes.length === 0) {
-      return getFallbackResponse(lang);
-    }
+    // const isUnclear = isQueryUnclear(query, lang);
+    // if (isUnclear && relevantSchemes.length === 0) {
+    //   return getFallbackResponse(lang);
+    // }
+    const isUnclear = false; // Bypass client-side check
 
     const body = {
       query,
       lang,
-      system_instruction: getSystemInstruction(lang, relevantSchemes, isUnclear),
-      urls: getReferenceUrls(query, lang)
+      system_instruction: getSystemInstruction(lang, relevantSchemes, isUnclear)
+      // urls removed; backend now handles searching via Puppeteer
     };
 
     const endpoint = `${BASE_URL}/api/llm/answer`;
