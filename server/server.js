@@ -219,6 +219,7 @@ app.post('/api/llm/answer', async (req, res) => {
             // Try launching with minimal args first
             browser = await puppeteer.launch({
                 headless: "new",
+                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
                 args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
             });
             const page = await browser.newPage();
