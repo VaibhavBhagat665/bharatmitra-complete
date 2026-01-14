@@ -8,8 +8,18 @@ const { db, auth, admin } = require('./firebaseAdmin');
 const app = express();
 const port = process.env.PORT || 8080;
 
-const clientOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : ['http://localhost:5173', 'http://localhost:3000', 'https://bharatmitra-complete.vercel.app'];
-app.use(cors({ origin: clientOrigins }));
+const defaultOrigins = ['http://localhost:5173', 'http://localhost:3000', 'https://bharatmitra-complete.vercel.app'];
+const envOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map(url => url.trim()) : [];
+const clientOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
+
+console.log('Allowed CORS Origins:', clientOrigins);
+
+app.use(cors({
+    origin: clientOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+}));
+app.options('*', cors({ origin: clientOrigins })); // Enable pre-flight for all routes
 app.use(express.json());
 
 // Auth middleware
