@@ -230,13 +230,20 @@ app.post('/api/llm/answer', async (req, res) => {
             browser = await puppeteer.launch({
                 headless: "new",
                 executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--no-zygote',
+                    '--single-process'
+                ]
             });
             const page = await browser.newPage();
 
             // Simple query cleaner to improve search relevance
-            // Removes conversational filler like "I need", "show me", "help with"
-            const cleanQuery = query.replace(/\b(I need|I want|I am|show me|give me|help me|looking for|schemes for|how to apply|benefits of)\b/gi, '').trim();
+            // Removes conversational filler like "I need", "show me", "help with", "any other"
+            const cleanQuery = query.replace(/\b(I need|I want|I am|show me|give me|help me|looking for|schemes for|how to apply|benefits of|any other|any|other|more)\b/gi, '').trim();
             // Fallback to original if aggressive cleaning leaves nothing
             const finalQuery = cleanQuery.length > 2 ? cleanQuery : query;
 
@@ -377,7 +384,8 @@ Answer:
         if (!hfRes.ok) {
             const text = await hfRes.text().catch(() => '');
             console.error('LLM Fetch Error:', text);
-            return res.status(500).json({ error: 'LLM request failed', details: text });
+            // Fallback: If LLM is down, return a hardcoded safe response rather than crashing the frontend
+            return res.json({ answer: "I am currently upgrading my knowledge base. Please try asking again in a few moments, or check myscheme.gov.in directly." });
         }
 
         const data = await hfRes.json();
