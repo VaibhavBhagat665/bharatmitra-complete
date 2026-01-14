@@ -8,7 +8,7 @@ const { db, auth, admin } = require('./firebaseAdmin');
 const app = express();
 const port = process.env.PORT || 8080;
 
-const clientOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : ['http://localhost:5173', 'http://localhost:3000'];
+const clientOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : ['http://localhost:5173', 'http://localhost:3000', 'https://bharatmitra-complete.vercel.app'];
 app.use(cors({ origin: clientOrigins }));
 app.use(express.json());
 
