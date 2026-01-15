@@ -1,4 +1,4 @@
-const BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8080';
+const BASE_URL = (import.meta as any).env?.VITE_API_URL || 'https://bharatmitra-complete-1.onrender.com';
 
 // Keyword mapping for scheme identification
 const SCHEME_KEYWORDS = {
@@ -294,6 +294,7 @@ export const getSchemeAdvice = async (query: string, lang: 'en' | 'hi'): Promise
     const text = (data && typeof data.text === 'string') ? data.text : '';
     return text && text.trim().length > 0 ? text : getFallbackResponse(lang);
   } catch (error) {
+    console.error("API Call Failed:", error);
     return getFallbackResponse(lang);
   }
 };
