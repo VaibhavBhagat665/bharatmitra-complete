@@ -1,4 +1,4 @@
-const BASE_URL = (import.meta as any).env?.VITE_SERVER_URL || '';
+const BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8080';
 
 // Keyword mapping for scheme identification
 const SCHEME_KEYWORDS = {

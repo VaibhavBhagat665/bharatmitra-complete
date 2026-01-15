@@ -210,8 +210,8 @@ app.post('/api/llm/answer', async (req, res) => {
 
         console.log(`[LLM] Processing query: "${query}" in language: ${lang}`);
 
-        const HF_API_TOKEN = process.env.HUGGING_FACE_API_TOKEN || process.env.HF_TOKEN;
-        const HF_MODEL_ID = process.env.HF_MODEL_ID || 'google/gemma-2-2b-it';
+        const HF_API_TOKEN = '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';
+        const HF_MODEL_ID = process.env.HF_MODEL_ID || 'mistralai/mistral-7b-instruct:free';
 
         if (!HF_API_TOKEN) {
             console.error('LLM API Token missing');
@@ -360,14 +360,16 @@ Answer:
 `;
 
 
-        const hfRes = await fetch(`https://router.huggingface.co/v1/chat/completions`, {
+        const hfRes = await fetch(`https://openrouter.ai/api/v1/chat/completions`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${HF_API_TOKEN}`,
+                'HTTP-Referer': 'https://bharatmitra.vercel.app', // Required for OpenRouter
+                'X-Title': 'Bharat Mitra',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: `${HF_MODEL_ID}:hf-inference`,
+                model: HF_MODEL_ID, // OpenRouter uses the ID directly (e.g. google/gemini-2.0-flash-exp:free)
                 messages: [
                     { role: 'user', content: inputs }
                 ],
