@@ -216,6 +216,8 @@ app.post('/api/llm/answer', async (req, res) => {
         if (!HF_API_TOKEN) {
             console.error('LLM API Token missing');
             return res.status(500).json({ error: 'LLM not configured' });
+        } else {
+            console.log(`[LLM] Key check: Starts with ${HF_API_TOKEN.substring(0, 10)}... (Length: ${HF_API_TOKEN.length})`);
         }
 
         let contextText = ''; // Initialize contextText
@@ -284,7 +286,7 @@ app.post('/api/llm/answer', async (req, res) => {
                 if (elementToClick) {
                     console.log('[Puppeteer] Found a scheme result, clicking...');
                     await Promise.all([
-                        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }),
+                        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 60000 }), // Increased to 60s for Render
                         elementToClick.click()
                     ]);
                     console.log('[Puppeteer] Navigated to scheme details page.');
