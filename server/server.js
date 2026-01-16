@@ -6,7 +6,7 @@ require('dotenv').config();
 const { db, auth, admin } = require('./firebaseAdmin');
 
 // Groq API Configuration (groq.com)
-const GROQ_API_KEY = process.env.GROQ_API_KEY || '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';
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_MODEL = 'llama-3.1-8b-instant';
 
 const app = express();
