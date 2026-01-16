@@ -277,24 +277,46 @@ export const getSchemeAdvice = async (query: string, lang: 'en' | 'hi'): Promise
     };
 
     const endpoint = `${BASE_URL}/api/llm/answer`;
-    const r = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!r.ok) {
-      if (r.status === 503) {
-        return lang === 'hi'
-          ? 'मॉडल लोड हो रहा है। कृपया कुछ देर बाद फिर कोशिश करें।'
-          : 'Model is loading. Please try again shortly.';
+
+    // Create abort controller with 120 second timeout for slow Render backend
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+    try {
+      const r = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!r.ok) {
+        if (r.status === 503) {
+          return lang === 'hi'
+            ? 'मॉडल लोड हो रहा है। कृपया कुछ देर बाद फिर कोशिश करें।'
+            : 'Model is loading. Please try again shortly.';
+        }
+        console.error("API returned error status:", r.status);
+        return getFallbackResponse(lang);
       }
+      const data = await r.json();
+      const text = (data && typeof data.text === 'string') ? data.text : '';
+      return text && text.trim().length > 0 ? text : getFallbackResponse(lang);
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.error("API Call Timeout: Request took longer than 2 minutes");
+        return lang === 'hi'
+          ? 'सर्वर प्रतिक्रिया देने में बहुत समय ले रहा है। कृपया बाद में पुनः प्रयास करें।'
+          : 'The server is taking too long to respond. Please try again later.';
+      }
+      console.error("API Call Failed:", fetchError);
       return getFallbackResponse(lang);
     }
-    const data = await r.json();
-    const text = (data && typeof data.text === 'string') ? data.text : '';
-    return text && text.trim().length > 0 ? text : getFallbackResponse(lang);
   } catch (error) {
-    console.error("API Call Failed:", error);
+    console.error("Unexpected error:", error);
     return getFallbackResponse(lang);
   }
 };
