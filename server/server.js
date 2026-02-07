@@ -60,36 +60,108 @@ app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// LLM Answer endpoint - SIMPLIFIED (no scraping)
+// LLM Answer endpoint - With conversation history and web fallback
 app.post('/api/llm/answer', async (req, res) => {
     try {
-        const { query, lang, system_instruction } = req.body || {};
+        const { query, lang, system_instruction, conversationHistory } = req.body || {};
         if (!query || typeof query !== 'string') {
             return res.status(400).json({ error: 'Missing query' });
         }
 
         console.log(`[LLM] Processing query: "${query}" in language: ${lang}`);
+        console.log(`[LLM] Conversation history: ${conversationHistory?.length || 0} previous messages`);
 
-        // Build reference URL (no scraping, just provide as context)
-        const searchUrl = `https://www.myscheme.gov.in/search?query=${encodeURIComponent(query)}`;
+        // Fetch PDF context from Python API (fast, cached)
+        let pdfContext = '';
+        try {
+            const contextRes = await fetch('http://localhost:5001/context', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, max_chars: 3000 })
+            });
+            if (contextRes.ok) {
+                const contextData = await contextRes.json();
+                pdfContext = contextData.context || '';
+                console.log(`[LLM] Got ${contextData.chars} chars of PDF context`);
+            }
+        } catch (err) {
+            console.log('[LLM] PDF API not available, continuing without PDF context');
+        }
+
+        // Trusted government URLs for reference
+        const trustedSources = {
+            general: 'https://www.myscheme.gov.in',
+            pmkisan: 'https://pmkisan.gov.in',
+            scholarships: 'https://scholarships.gov.in',
+            agriculture: 'https://agricoop.nic.in',
+            women: 'https://wcd.nic.in',
+            seniors: 'https://socialjustice.gov.in',
+            education: 'https://education.gov.in',
+            health: 'https://nhp.gov.in',
+            housing: 'https://pmaymis.gov.in',
+            employment: 'https://eshram.gov.in'
+        };
+
+        // Determine relevant trusted source based on query keywords
+        let relevantSource = trustedSources.general;
+        const queryLower = query.toLowerCase();
+        if (queryLower.includes('kisan') || queryLower.includes('farmer') || queryLower.includes('agriculture') || queryLower.includes('किसान')) {
+            relevantSource = trustedSources.pmkisan;
+        } else if (queryLower.includes('scholarship') || queryLower.includes('student') || queryLower.includes('छात्रवृत्ति')) {
+            relevantSource = trustedSources.scholarships;
+        } else if (queryLower.includes('women') || queryLower.includes('महिला') || queryLower.includes('beti')) {
+            relevantSource = trustedSources.women;
+        } else if (queryLower.includes('senior') || queryLower.includes('pension') || queryLower.includes('वृद्ध')) {
+            relevantSource = trustedSources.seniors;
+        } else if (queryLower.includes('education') || queryLower.includes('school') || queryLower.includes('शिक्षा')) {
+            relevantSource = trustedSources.education;
+        } else if (queryLower.includes('health') || queryLower.includes('ayushman') || queryLower.includes('स्वास्थ्य')) {
+            relevantSource = trustedSources.health;
+        } else if (queryLower.includes('house') || queryLower.includes('awas') || queryLower.includes('घर')) {
+            relevantSource = trustedSources.housing;
+        } else if (queryLower.includes('job') || queryLower.includes('employment') || queryLower.includes('रोजगार')) {
+            relevantSource = trustedSources.employment;
+        }
+
+        // Build conversation context from history
+        let conversationContext = '';
+        if (conversationHistory && Array.isArray(conversationHistory) && conversationHistory.length > 0) {
+            conversationContext = '\nPREVIOUS CONVERSATION:\n';
+            // Take last 5 exchanges for context
+            const recentHistory = conversationHistory.slice(-5);
+            recentHistory.forEach((item, i) => {
+                conversationContext += `User: ${item.query}\nAssistant: ${item.response.substring(0, 300)}...\n\n`;
+            });
+        }
 
         // Build prompt with URL reference
         const instruction = (typeof system_instruction === 'string' && system_instruction.trim().length > 0)
             ? system_instruction
-            : `You are a helpful assistant for Indian government schemes. Reply in ${lang === 'hi' ? 'Hindi (Devanagari)' : 'English'}.`;
+            : `You are Bharat Mitra, a helpful assistant for Indian government schemes. Reply in ${lang === 'hi' ? 'Hindi (Devanagari)' : 'English'}.`;
 
+        // Build enhanced prompt with PDF context and conversation history
         const inputs = `${instruction}
+${conversationContext}
+CURRENT USER QUESTION: ${query}
 
-USER QUESTION: ${query}
+${pdfContext ? `DOCUMENT CONTEXT (from official scheme database):
+${pdfContext}
 
-REFERENCE: For official information, users can visit ${searchUrl}
+` : ''}TRUSTED OFFICIAL SOURCES:
+- Main Portal: ${trustedSources.general}
+- Specific Portal: ${relevantSource}
 
 Instructions:
-- Use your knowledge about Indian government schemes
-- Provide scheme names, eligibility, documents needed, and how to apply
-- Suggest checking myscheme.gov.in, PM Kisan Portal, or other official sources for latest details
-- DO NOT provide direct clickable URL links in your response
-- Provide guidance on how to navigate to official portals
+- Use the DOCUMENT CONTEXT above as your PRIMARY source of information
+- If the question is a FOLLOW-UP, refer to the PREVIOUS CONVERSATION for context
+- Provide scheme names, eligibility criteria, required documents, and application process
+- If information is not in context, suggest the user visit the specific official portal mentioned above
+- When mentioning official websites, use these verified working URLs:
+  * myscheme.gov.in (for all schemes)
+  * pmkisan.gov.in (for farmer schemes)
+  * scholarships.gov.in (for student scholarships)
+  * nhp.gov.in (for health schemes)
+- Be conversational and remember what the user asked before
 - Answer in ${lang === 'hi' ? 'Hindi' : 'English'}
 
 Answer:

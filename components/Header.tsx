@@ -17,16 +17,16 @@ const ChevronDownIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const Header: React.FC = () => {
-  const { 
-    tokenBalance, 
-    language, 
-    setLanguage, 
-    user, 
-    userData, 
+  const {
+    tokenBalance,
+    language,
+    setLanguage,
+    user,
+    userData,
     loading,
-    logout 
+    logout
   } = useContext(UserContext);
-  
+
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -109,8 +109,6 @@ const Header: React.FC = () => {
     ['/voice-chat', t.voiceChat],
     ['/scholarships', t.scholarships],
     ['/benefits', t.benefits],
-    ['/leaderboard', t.leaderboard],
-    ['/account', t.myAccount],
   ];
 
   const toggleMobileMenu = () => {
@@ -122,14 +120,14 @@ const Header: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    if (isLoggingOut) return; 
-    
+    if (isLoggingOut) return;
+
     setIsLoggingOut(true);
     setIsMenuOpen(false);
-    
+
     try {
-      await logout(); 
-      navigate('/'); 
+      await logout();
+      navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
@@ -163,7 +161,6 @@ const Header: React.FC = () => {
             </div>
           </Link>
 
-          {/* Desktop Navigation - Enhanced with hover effects */}
           <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
             {[
               ['/', t.home],
@@ -171,7 +168,6 @@ const Header: React.FC = () => {
               ['/voice-chat', t.voiceChat],
               ['/benefits', t.benefits],
               ['/scholarships', t.scholarships],
-              ['/leaderboard', t.leaderboard],
             ].map(([to, label]) => (
               <NavLink
                 key={to}
@@ -194,120 +190,14 @@ const Header: React.FC = () => {
                 <button
                   key={lang}
                   onClick={() => setLanguage(lang)}
-                  className={`px-3 py-1.5 text-xs sm:text-sm font-bold rounded-full transition-all duration-300 ${
-                    language === lang
-                      ? 'bg-gradient-to-r from-bharat-blue-600 to-bharat-blue-700 text-white shadow-lg transform scale-105'
-                      : 'text-gray-600 hover:text-bharat-blue-700 hover:bg-white/60'
-                  }`}
+                  className={`px-3 py-1.5 text-xs sm:text-sm font-bold rounded-full transition-all duration-300 ${language === lang
+                    ? 'bg-gradient-to-r from-bharat-blue-600 to-bharat-blue-700 text-white shadow-lg transform scale-105'
+                    : 'text-gray-600 hover:text-bharat-blue-700 hover:bg-white/60'
+                    }`}
                 >
                   {lang === 'en' ? 'EN' : 'हि'}
                 </button>
               ))}
-            </div>
-
-            {/* Token Display and User Section */}
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              {loading ? (
-                <div className="h-8 w-16 sm:h-10 sm:w-24 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full animate-pulse"></div>
-              ) : user && userData ? (
-                <>
-                  {/* Token Display - Enhanced with gradient and glow */}
-                  <div className="relative" ref={tokenMenuRef}>
-                    <button 
-                      onClick={toggleTokenMenu}
-                      className="flex items-center space-x-1 sm:space-x-2 bg-gradient-to-r from-bharat-green-100 to-emerald-100 border border-bharat-green-200 px-3 sm:px-4 py-2 rounded-full shadow-md hover:shadow-lg hover:from-bharat-green-200 hover:to-emerald-200 transition-all duration-300 transform hover:scale-105 group"
-                    >
-                      <TokenIcon className="h-4 w-4 sm:h-5 sm:w-5 text-bharat-green-600 group-hover:text-bharat-green-700 transition-colors duration-300" />
-                      <span className="font-black text-sm sm:text-base text-gray-900 group-hover:text-gray-800">
-                        {userData.bharat_tokens || 0}
-                      </span>
-                      <ChevronDownIcon className={`h-3 w-3 sm:h-4 sm:w-4 text-gray-600 transition-all duration-300 ${isTokenMenuOpen ? 'rotate-180 text-bharat-green-600' : 'group-hover:text-bharat-green-600'}`} />
-                    </button>
-                    
-                    {/* Token Dropdown - Enhanced with modern styling */}
-                    {isTokenMenuOpen && (
-                      <div className="absolute right-0 mt-3 w-52 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl py-2 z-50 border border-white/20 animate-in slide-in-from-top-2 duration-200">
-                        <Link 
-                          to="/buy-tokens" 
-                          onClick={closeTokenMenu} 
-                          className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-bharat-green-50 hover:to-emerald-50 transition-all duration-200 mx-2 rounded-xl"
-                        >
-                          <TokenIcon className="h-4 w-4 mr-3 text-bharat-green-600" />
-                          {t.buyTokens}
-                        </Link>
-                        <Link 
-                          to="/redeem" 
-                          onClick={closeTokenMenu} 
-                          className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-bharat-green-50 hover:to-emerald-50 transition-all duration-200 mx-2 rounded-xl"
-                        >
-                          <svg className="h-5 w-5 mr-3 text-bharat-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                          </svg>
-                          {t.redeem}
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Desktop Account Menu - Enhanced */}
-                  <div className="relative hidden md:block" ref={menuRef}>
-                    <button 
-                      onClick={() => setIsMenuOpen(!isMenuOpen)} 
-                      className="flex items-center space-x-2 p-2 rounded-full hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 transition-all duration-300 group"
-                      disabled={isLoggingOut}
-                    >
-                      <div className="p-1 rounded-full bg-gradient-to-r from-bharat-blue-500 to-bharat-blue-600 shadow-md">
-                        <UserIcon className="h-5 w-5 text-white"/>
-                      </div>
-                      <span className="font-semibold text-sm text-gray-800 group-hover:text-bharat-blue-700">
-                        {userData.username?.split(' ')[0] || t.user}
-                      </span>
-                      <ChevronDownIcon className={`h-4 w-4 text-gray-600 transition-all duration-300 ${isMenuOpen ? 'rotate-180 text-bharat-blue-600' : 'group-hover:text-bharat-blue-600'}`} />
-                    </button>
-                    {isMenuOpen && (
-                      <div className="absolute right-0 mt-3 w-52 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl py-2 z-50 border border-white/20 animate-in slide-in-from-top-2 duration-200">
-                        <Link 
-                          to="/account" 
-                          onClick={() => setIsMenuOpen(false)} 
-                          className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-bharat-blue-50 hover:to-blue-50 transition-all duration-200 mx-2 rounded-xl"
-                        >
-                          <UserIcon className="h-4 w-4 mr-3 text-bharat-blue-600" />
-                          {t.myAccount}
-                        </Link>
-                        <button 
-                          onClick={handleLogout} 
-                          disabled={isLoggingOut}
-                          className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 transition-all duration-200 mx-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isLoggingOut ? (
-                            <>
-                              <svg className="h-4 w-4 mr-3 text-red-500 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                              {t.loggingOut}
-                            </>
-                          ) : (
-                            <>
-                              <svg className="h-4 w-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                              </svg>
-                              {t.logout}
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <Link 
-                  to="/login" 
-                  className="bg-gradient-to-r from-bharat-blue-600 to-bharat-blue-700 text-white font-bold py-2 px-4 sm:px-6 rounded-full text-xs sm:text-sm hover:from-bharat-blue-700 hover:to-bharat-blue-800 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
-                >
-                  {t.signIn}
-                </Link>
-              )}
             </div>
 
             {/* Mobile Menu Button - Enhanced */}
@@ -318,19 +208,16 @@ const Header: React.FC = () => {
             >
               <div className="w-6 h-6 flex flex-col justify-center items-center">
                 <div
-                  className={`w-5 h-0.5 bg-gray-600 transition-all duration-300 group-hover:bg-bharat-blue-600 ${
-                    isMobileMenuOpen ? 'rotate-45 translate-y-1.5' : 'mb-1'
-                  }`}
+                  className={`w-5 h-0.5 bg-gray-600 transition-all duration-300 group-hover:bg-bharat-blue-600 ${isMobileMenuOpen ? 'rotate-45 translate-y-1.5' : 'mb-1'
+                    }`}
                 />
                 <div
-                  className={`w-5 h-0.5 bg-gray-600 transition-all duration-300 group-hover:bg-bharat-blue-600 ${
-                    isMobileMenuOpen ? 'opacity-0' : 'mb-1'
-                  }`}
+                  className={`w-5 h-0.5 bg-gray-600 transition-all duration-300 group-hover:bg-bharat-blue-600 ${isMobileMenuOpen ? 'opacity-0' : 'mb-1'
+                    }`}
                 />
                 <div
-                  className={`w-5 h-0.5 bg-gray-600 transition-all duration-300 group-hover:bg-bharat-blue-600 ${
-                    isMobileMenuOpen ? '-rotate-45 -translate-y-1.5' : ''
-                  }`}
+                  className={`w-5 h-0.5 bg-gray-600 transition-all duration-300 group-hover:bg-bharat-blue-600 ${isMobileMenuOpen ? '-rotate-45 -translate-y-1.5' : ''
+                    }`}
                 />
               </div>
             </button>
@@ -347,67 +234,15 @@ const Header: React.FC = () => {
                   to={to}
                   onClick={closeMobileMenu}
                   className={({ isActive }) =>
-                    `block px-4 py-3 rounded-xl font-semibold text-base transition-all duration-300 ${
-                      isActive
-                        ? 'text-bharat-blue-800 bg-gradient-to-r from-bharat-blue-100 to-bharat-blue-50 shadow-inner border border-bharat-blue-200'
-                        : 'text-gray-600 hover:text-bharat-blue-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100'
+                    `block px-4 py-3 rounded-xl font-semibold text-base transition-all duration-300 ${isActive
+                      ? 'text-bharat-blue-800 bg-gradient-to-r from-bharat-blue-100 to-bharat-blue-50 shadow-inner border border-bharat-blue-200'
+                      : 'text-gray-600 hover:text-bharat-blue-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100'
                     }`
                   }
                 >
                   {label}
                 </NavLink>
               ))}
-              
-              {/* Mobile Token Menu */}
-              {user && userData && (
-                <div className="border-t border-gray-200 pt-4 mt-4">
-                  <div className="px-4 py-2 text-sm font-bold text-gray-500 uppercase tracking-wide">
-                    Token Options
-                  </div>
-                  <Link
-                    to="/buy-tokens"
-                    onClick={closeMobileMenu}
-                    className="flex items-center px-4 py-3 rounded-xl font-semibold text-base transition-all duration-300 text-gray-600 hover:text-bharat-green-700 hover:bg-gradient-to-r hover:from-bharat-green-50 hover:to-emerald-50"
-                  >
-                    <TokenIcon className="h-5 w-5 mr-3 text-bharat-green-600" />
-                    {t.buyTokens}
-                  </Link>
-                  <Link
-                    to="/redeem"
-                    onClick={closeMobileMenu}
-                    className="flex items-center px-4 py-3 rounded-xl font-semibold text-base transition-all duration-300 text-gray-600 hover:text-bharat-green-700 hover:bg-gradient-to-r hover:from-bharat-green-50 hover:to-emerald-50"
-                  >
-                    <svg className="h-5 w-5 mr-3 text-bharat-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                    </svg>
-                    {t.redeem}
-                  </Link>
-                  
-                  {/* Mobile Logout Button */}
-                  <button
-                    onClick={handleLogout}
-                    disabled={isLoggingOut}
-                    className="w-full flex items-center px-4 py-3 rounded-xl font-semibold text-base transition-all duration-300 text-gray-600 hover:text-red-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isLoggingOut ? (
-                      <>
-                        <svg className="h-5 w-5 mr-3 text-red-500 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        {t.loggingOut}
-                      </>
-                    ) : (
-                      <>
-                        <svg className="h-5 w-5 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        {t.logout}
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
             </nav>
           </div>
         )}

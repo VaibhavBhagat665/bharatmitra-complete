@@ -260,20 +260,34 @@ How can I assist you today?`;
   }
 };
 
+// Conversation history storage (last 10 exchanges)
+interface ConversationItem {
+  query: string;
+  response: string;
+  timestamp: number;
+}
+
+let conversationHistory: ConversationItem[] = [];
+
+// Clear conversation history (call when starting new session)
+export const clearConversationHistory = () => {
+  conversationHistory = [];
+  console.log('[Chat] Conversation history cleared');
+};
+
+// Get current conversation history
+export const getConversationHistory = () => conversationHistory;
+
 export const getSchemeAdvice = async (query: string, lang: 'en' | 'hi'): Promise<string> => {
   try {
     const relevantSchemes = identifyRelevantSchemes(query, lang);
-    // const isUnclear = isQueryUnclear(query, lang);
-    // if (isUnclear && relevantSchemes.length === 0) {
-    //   return getFallbackResponse(lang);
-    // }
     const isUnclear = false; // Bypass client-side check
 
     const body = {
       query,
       lang,
-      system_instruction: getSystemInstruction(lang, relevantSchemes, isUnclear)
-      // urls removed; backend now handles searching via Puppeteer
+      system_instruction: getSystemInstruction(lang, relevantSchemes, isUnclear),
+      conversationHistory: conversationHistory.slice(-5) // Send last 5 exchanges
     };
 
     const endpoint = `${BASE_URL}/api/llm/answer`;
@@ -303,7 +317,23 @@ export const getSchemeAdvice = async (query: string, lang: 'en' | 'hi'): Promise
       }
       const data = await r.json();
       const text = (data && typeof data.text === 'string') ? data.text : '';
-      return text && text.trim().length > 0 ? text : getFallbackResponse(lang);
+      const response = text && text.trim().length > 0 ? text : getFallbackResponse(lang);
+
+      // Store in conversation history
+      conversationHistory.push({
+        query,
+        response,
+        timestamp: Date.now()
+      });
+
+      // Keep only last 10 exchanges
+      if (conversationHistory.length > 10) {
+        conversationHistory = conversationHistory.slice(-10);
+      }
+
+      console.log(`[Chat] Conversation history now has ${conversationHistory.length} exchanges`);
+
+      return response;
     } catch (fetchError: any) {
       clearTimeout(timeoutId);
       if (fetchError.name === 'AbortError') {
